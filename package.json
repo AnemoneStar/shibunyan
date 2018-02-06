@@ -1,0 +1,25 @@
+{
+  "name": "shibunyan",
+  "version": "1.0.0",
+  "description": "mikunyan in TypeScript",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "preinstall": "npm run build",
+    "build": "tsc -d"
+  },
+  "directories": {
+    "lib": "dist"
+  },
+  "dependencies": {
+    "lz4": "^0.5.3",
+    "mz": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/mz": "0.0.32",
+    "@types/node": "^9.3.0",
+    "typescript": "^2.6.2"
+  },
+  "author": "",
+  "license": "MIT"
+}

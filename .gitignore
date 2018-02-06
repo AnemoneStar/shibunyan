@@ -1,0 +1,5 @@
+node_modules/
+dist/
+*.bmp
+*.png
+*.unity3d
