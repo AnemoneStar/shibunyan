@@ -1,4 +1,4 @@
-const shibunyan = require("./dist/index.js")
+const shibunyan = require("../")
 const fs = require("fs")
 
 const assetBundle = new shibunyan.AssetBundle(fs.readFileSync(process.argv[2]))
