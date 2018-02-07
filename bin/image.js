@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const shibunyan = require("../")
 const fs = require("fs")
 
