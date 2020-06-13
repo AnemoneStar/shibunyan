@@ -12,7 +12,7 @@
     "lib": "dist"
   },
   "dependencies": {
-    "lz4": "^0.5.3",
+    "lz4": "^0.6.3",
     "mz": "^2.7.0"
   },
   "devDependencies": {
