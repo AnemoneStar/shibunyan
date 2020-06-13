@@ -3,12 +3,13 @@ const shibunyan = require("../")
 const fs = require("fs")
 
 const assetBundle = new shibunyan.AssetBundle(fs.readFileSync(process.argv[2]))
-assetBundle.assets.forEach(asset => {
+for (const asset of assetBundle.assets) {
     var cnt = 0
-    asset.objects.filter(obj => asset.objectType(obj) == "Texture2D").forEach(obj => {
+    for (const obj of asset.objects) {
+        if (asset.objectType(obj) !== "Texture2D") continue
         const image = new shibunyan.ImageDecoder(asset.parseObject(obj))
         fs.writeFileSync("out."+cnt+".bmp", image.bmp)
         console.log("out."+cnt+".bmp")
         cnt++
-    })
-})
+    }
+}
