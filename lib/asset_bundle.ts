@@ -2,7 +2,7 @@ import BinaryReader from "./binary_reader";
 import { UnknownAssetBundleSignatureError, NotImplementedError } from "./error";
 import Asset from "./asset";
 import { times } from "./utils";
-// const lz4 = require("lz4")
+import { uncompressBlock } from "@rinsuki/lz4-ts"
 
 export default class AssetBundle {
     signature: string
@@ -86,10 +86,9 @@ export default class AssetBundle {
                 return buffer
             case 2:
             case 3:
-                throw `currently, LZ4 Compressed AssetBundle has been dropped because build error of lz4 library.`
-                // var uncompBuffer = new Buffer(max_dest_size)
-                // lz4.decodeBlock(buffer, uncompBuffer)
-                // return uncompBuffer
+                var uncompBuffer = new Buffer(max_dest_size)
+                uncompressBlock(buffer, uncompBuffer)
+                return uncompBuffer
             default:
                 console.warn("unknown flag: "+flags.toString(16))
                 return buffer

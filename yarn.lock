@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+"@rinsuki/lz4-ts@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@rinsuki/lz4-ts/-/lz4-ts-1.0.0.tgz#62c4501e7cfd43187704b453b14240690502ff36"
+  integrity sha512-TdrVIgG7CNDfDboMy4O5gcFnlbF02NlH3MGIGHMDLaS69rpGXsIAQajdHl/2e7eg89ltED41TbPILXXSuTuO1Q==
+
 "@types/node@^14.0.13":
   version "14.0.13"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-14.0.13.tgz#ee1128e881b874c371374c1f72201893616417c9"
