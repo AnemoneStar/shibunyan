@@ -6,7 +6,6 @@ export default class TypeTree {
     constructor(reader: BinaryReader) {
         const nodeCount = reader.int32U()
         const bufferSize = reader.int32U()
-        console.log(nodeCount, bufferSize)
         const nodes = []
         for (let i = 0; i<nodeCount; i++) {
             nodes.push({

@@ -52,11 +52,9 @@ export default class AssetBundle {
                     status: head.int32U(),
                     name: head.string(),
                 }})
-                console.log(blocks, assetBlocks)
 
                 var rawData: Uint8Array = new Uint8Array(0)
                 for (let block of blocks) {
-                    console.log(block)
                     const unCompData = this.uncompress(reader.read(block.c), block.u, block.flags)
                     const newData = new Uint8Array(rawData.length + unCompData.length)
                     newData.set(rawData)
@@ -65,7 +63,6 @@ export default class AssetBundle {
                 }
 
                 for ( let block of assetBlocks) {
-                    console.log(block)
                     const buf = new Buffer(block.size)
                     buf.set(rawData.slice(block.offset, block.size))
                     const asset = new Asset(buf, block.name)
@@ -76,11 +73,9 @@ export default class AssetBundle {
             default:
                 throw new UnknownAssetBundleSignatureError(this.signature)
         }
-        console.log(this)
     }
 
     uncompress(buffer: Buffer, max_dest_size: number, flags: number): Buffer {
-        console.log(flags & 0x3f)
         switch(flags & 0x3f) {
             case 0:
                 return buffer

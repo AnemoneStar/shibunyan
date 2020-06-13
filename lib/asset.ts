@@ -31,7 +31,6 @@ export default class Asset {
             const hasTypeTrees = (reader.int8S() != 0)
             const typeTreeCount = reader.int32U()
             for (let i = 0; i<typeTreeCount; i++) {
-                console.log(typeTreeCount)
                 const classId = reader.int32S()
                 reader.skip(1)
                 const scriptId = reader.int16S()

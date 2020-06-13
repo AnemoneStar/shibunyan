@@ -13,7 +13,6 @@ export default class ImageDecoder {
     bmp: Buffer
     
     constructor(object: ObjectValue) {
-        console.log(object)
         this.endian = object.endian
         this.width = object.m_Width.value
         this.height = object.m_Height.value
