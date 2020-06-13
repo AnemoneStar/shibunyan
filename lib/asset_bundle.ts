@@ -47,8 +47,8 @@ export default class AssetBundle {
                     flags: head.int16U()
                 }))
                 const assetBlocks = times(head.int32U(), () => { return {
-                    offset: head.int64U(),
-                    size: head.int64U(),
+                    offset: head.safeInt64U(),
+                    size: head.safeInt64U(),
                     status: head.int32U(),
                     name: head.string(),
                 }})

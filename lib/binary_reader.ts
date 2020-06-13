@@ -1,99 +1,108 @@
+import { SyncReader } from "binarin"
+
 export enum Endian {
     Little = 0,
     Big = 1
 }
+
+// compatible layer
 export default class BinaryReader {
     private buffer: Buffer
-    public endian: Endian = Endian.Big
-    public position: number = 0
+    public reader: SyncReader
 
     constructor(buffer: Buffer) {
         this.buffer = buffer
+        this.reader = new SyncReader(new DataView(buffer))
+    }
+
+    get endian() {
+        return this.reader.isLittleEndian ? Endian.Little : Endian.Big
+    }
+
+    set endian(e: Endian) {
+        this.reader.isLittleEndian = e == Endian.Little ? true : false
+    }
+
+    get position() {
+        return this.reader.pointer
+    }
+
+    set position(p: number) {
+        this.reader.pointer = p
     }
 
     jump(position: number) {
-        this.position = position
+        this.reader.pointer = position
     }
 
     skip(size: number) {
-        this.position += size
+        this.reader.skip(size)
     }
 
     align(size: number) {
-        this.position = Math.floor((this.position + size - 1) / size) * size
+        this.reader.align(size)
     }
 
     read(size: number) {
-        const data = this.buffer.slice(this.position, this.position + size)
-        this.position += size
-        return data
+        return new Buffer(this.reader.bytes(size))
     }
+
     readString(size: number) {
-        return this.read(size).toString("utf-8")
+        const decoder = new TextDecoder("UTF-8")
+        return decoder.decode(this.read(size))
     }
 
     string() {
-        var readData = -1
-        var arr = []
-        while (readData = this.int8U()) {
-            arr.push(readData)
-        }
-        return Buffer.from(arr).toString("utf-8")
+        return this.reader.zeroTerminatedString()
     }
 
     int8S() {
-        const data = this.buffer.readInt8(this.position)
-        this.position++
-        return data
+        return this.reader.i8()
     }
     int8U() {
-        const data = this.buffer.readUInt8(this.position)
-        this.position++
-        return data
+        return this.reader.u8()
     }
 
     int16S() {
-        const data = (this.endian ? this.buffer.readInt16BE : this.buffer.readInt16LE).call(this.buffer, this.position) as number
-        this.position += 2
-        return data
+        return this.reader.i16()
     }
     int16U() {
-        const data = (this.endian ? this.buffer.readUInt16BE : this.buffer.readUInt16LE).call(this.buffer, this.position) as number
-        this.position += 2
-        return data
+        return this.reader.u16()
     }
 
     int32S() {
-        const data = (this.endian ? this.buffer.readInt32BE: this.buffer.readInt32LE).call(this.buffer, this.position) as number
-        this.position += 4
-        return data
+        return this.reader.i32()
     }
     int32U() {
-        const data = (this.endian ? this.buffer.readUInt32BE : this.buffer.readUInt32LE).call(this.buffer, this.position) as number
-        this.position += 4
-        return data
+        return this.reader.u32()
     }
 
     int64S() {
-        const data = (this.endian ? this.buffer.readIntBE : this.buffer.readIntLE).call(this.buffer, this.position, 8) as number
-        this.position += 8
-        return data
+        return this.reader.i64()
     }
     int64U() {
-        const data = (this.endian ? this.buffer.readUIntBE : this.buffer.readUIntLE).call(this.buffer, this.position, 8) as number
-        this.position += 8
-        return data
+        return this.reader.u64()
+    }
+
+    safeInt64S() {
+        const r = this.reader.i64()
+        if (r > Number.MAX_SAFE_INTEGER) throw `too big`
+        if (r < Number.MIN_SAFE_INTEGER) throw `too small`
+        return Number(r)
+    }
+
+    safeInt64U() {
+        const r = this.reader.u64()
+        if (r > Number.MAX_SAFE_INTEGER) throw `too big`
+        if (r < Number.MIN_SAFE_INTEGER) throw `too small`
+        return Number(r)
     }
 
     float() {
-        const data = (this.endian ? this.buffer.readFloatBE : this.buffer.readFloatLE).call(this.buffer, this.position) as number
-        this.position += 4
-        return data
+        return this.reader.float()
     }
 
     double() {
-        const data = (this.endian ? this.buffer.readDoubleBE : this.buffer.readDoubleLE).call(this.buffer, this.position) as number
-        this.position += 8
-        return data
+        return this.reader.double()
     }
 }

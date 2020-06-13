@@ -5,17 +5,16 @@ import class_id from "./constants/class_id";
 import ObjectValue from "./object_value";
 
 export default class Asset {
-    name: string
     format: number
     generatorVersion: string
     targetPlatform: number
     endian: Endian = Endian.Big
     assetClasses: AssetClass[]
     objects: AssetObjectData[]
-    addIds: number[][]
-    references: AssetReference[]
+    addIds: (number | bigint)[][] = []
+    references: AssetReference[] = []
 
-    constructor(data: Buffer, name: string) {
+    constructor(data: Buffer, public name: string) {
         const reader = new BinaryReader(data)
         const metadataSize = reader.int32U()
         const size = reader.int32U()
@@ -86,7 +85,6 @@ export default class Asset {
         }
 
         if (this.format >= 11) {
-            this.addIds = []
             const count = reader.int32U()
             for (let i = 0; i<count; i++) {
                 if (this.format >= 14) reader.align(4)
@@ -231,7 +229,7 @@ export interface AssetClass {
 }
 
 export interface AssetObjectData {
-    pathId: number
+    pathId: number | bigint
     offset: number
     size: number
     typeId: number | null
