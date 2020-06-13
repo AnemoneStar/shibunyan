@@ -8,6 +8,7 @@
 
 ### supported image format
 
+- rgba24
 - rgba4444
 - rgb565
 - etc1

@@ -26,6 +26,9 @@ export default class ImageDecoder {
         var d: Uint8Array | undefined
 
         switch (fmt) {
+            case 3:
+                d = this.decode_rgb24()
+                break
             case 7:
                 d = this.decode_rgb565()
                 break
@@ -40,6 +43,18 @@ export default class ImageDecoder {
         }
 
         this.bmp = bmpGenerator(this.width, this.height, d)
+    }
+
+    decode_rgb24() {
+        const l = this.width * this.height * 4
+        var re = new Uint8Array(l)
+        for (let i=0; i<l; i+=4) {
+            re[i + 0] = this.reader.int8U()
+            re[i + 1] = this.reader.int8U()
+            re[i + 2] = this.reader.int8U()
+            re[i + 3] = 255
+        }
+        return re
     }
 
     decode_rgb565() {
