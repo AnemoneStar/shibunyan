@@ -4,3 +4,4 @@ node_modules/
 *.unity3d
 *.tgz
 package*/
+.vscode
