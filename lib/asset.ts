@@ -106,7 +106,7 @@ export default class Asset {
     }
 
     findAssetClass(obj: AssetObjectData) {
-        return obj.classIndex
+        return obj.classIndex != null
         ?   this.assetClasses[obj.classIndex]
         :   this.assetClasses.find(e => e.classId == obj.classId) || this.assetClasses.find(e => e.classId == obj.typeId)
     }
