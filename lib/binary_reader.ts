@@ -12,7 +12,7 @@ export default class BinaryReader {
 
     constructor(buffer: Buffer) {
         this.buffer = buffer
-        this.reader = new SyncReader(new DataView(buffer))
+        this.reader = new SyncReader(new DataView(buffer.buffer))
     }
 
     get endian() {
