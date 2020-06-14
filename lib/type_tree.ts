@@ -3,7 +3,7 @@ import string_table from "./constants/string_table";
 
 export default class TypeTree {
     nodes: Node[] = []
-    constructor(reader: BinaryReader) {
+    constructor(reader: BinaryReader, version: number) {
         const nodeCount = reader.int32U()
         const bufferSize = reader.int32U()
         const nodes = []

@@ -14,7 +14,7 @@ export default class Asset {
     addIds: (number | bigint)[][] = []
     references: AssetReference[] = []
 
-    constructor(data: Buffer, public name: string) {
+    constructor(data: Uint8Array, public name: string) {
         const reader = new BinaryReader(data)
         const metadataSize = reader.int32U()
         const size = reader.int32U()
@@ -35,7 +35,7 @@ export default class Asset {
                 reader.skip(1)
                 const scriptId = reader.int16S()
                 const hash = (classId < 0 || classId == 114) ? reader.readString(32) : reader.readString(16)
-                const typeTree = hasTypeTrees ? new TypeTree(reader) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
+                const typeTree = hasTypeTrees ? new TypeTree(reader, this.format) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
                 this.assetClasses.push({
                     classId,
                     scriptId,
@@ -49,7 +49,7 @@ export default class Asset {
             for (let i = 0; i<typeTreeCount; i++) {
                 const classId = reader.int32S()
                 const hash = classId < 0 ? reader.readString(32) : reader.readString(16)
-                const typeTree = hasTypeTrees ? new TypeTree(reader) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
+                const typeTree = hasTypeTrees ? new TypeTree(reader, this.format) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
                 this.assetClasses.push({
                     classId,
                     scriptId: null,
@@ -235,12 +235,12 @@ export interface AssetObjectData {
     classId: number | null
     classIndex: number | null
     destroyed: boolean
-    data: Buffer
+    data: Uint8Array
 }
 
 export interface AssetReference {
     path: string
-    guid: Buffer
+    guid: Uint8Array
     type: number
     filePath: string
 }

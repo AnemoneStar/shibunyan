@@ -7,11 +7,9 @@ export enum Endian {
 
 // compatible layer
 export default class BinaryReader {
-    private buffer: Buffer
     public reader: SyncReader
 
-    constructor(buffer: Buffer) {
-        this.buffer = buffer
+    constructor(buffer: Uint8Array) {
         this.reader = new SyncReader(new DataView(buffer.buffer))
     }
 
@@ -44,7 +42,7 @@ export default class BinaryReader {
     }
 
     read(size: number) {
-        return new Buffer(this.reader.bytes(size))
+        return new Uint8Array(this.reader.bytes(size))
     }
 
     readString(size: number) {

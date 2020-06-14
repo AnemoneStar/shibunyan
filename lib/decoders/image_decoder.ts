@@ -8,7 +8,7 @@ export default class ImageDecoder {
     endian: number
     width: number
     height: number
-    bin: Buffer
+    bin: Uint8Array
     reader: BinaryReader
     bmp: Buffer
     
@@ -16,7 +16,7 @@ export default class ImageDecoder {
         this.endian = object.endian
         this.width = object.m_Width.value
         this.height = object.m_Height.value
-        this.bin = Buffer.from(object["image data"].value)
+        this.bin = new Uint8Array(object["image data"].value)
         const fmt = object["m_TextureFormat"].value
 
         this.reader = new BinaryReader(this.bin)
@@ -115,12 +115,13 @@ export default class ImageDecoder {
     Etc1ModifierTable = [[2, 8], [5, 17], [9, 29], [13, 42], [18, 60], [24, 80], [33, 106], [47, 183]]
     Etc1SubblockTable = [[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1]]
 
-    decode_etc1_block(buf: Buffer) {
+    decode_etc1_block(buf: ArrayBuffer) {
+        const arr = new Uint8Array(buf)
         function hex(num: number): string {
             return ("0"+num.toString(16)).slice(-2)
         }
-        const up = parseInt("0x"+hex(buf[0])+hex(buf[1])+hex(buf[2])+hex(buf[3]))
-        const down = parseInt("0x"+hex(buf[4])+hex(buf[5])+hex(buf[6])+hex(buf[7]))
+        const up = parseInt("0x"+hex(arr[0])+hex(arr[1])+hex(arr[2])+hex(arr[3]))
+        const down = parseInt("0x"+hex(arr[4])+hex(arr[5])+hex(arr[6])+hex(arr[7]))
         const now = (leftpad(up.toString(2), 32) + leftpad(down.toString(2), 32))
         function leftpad(s: string, n: number) {
             return ("0".repeat(n) + s).slice(-n)

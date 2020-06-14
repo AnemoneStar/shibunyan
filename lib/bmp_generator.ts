@@ -1,6 +1,6 @@
 export default function bmpGenerator(width: number, height: number, rgba: Uint8Array) {
     const offset = 134
-    var buffer = new Buffer(offset + (4 * width * height))
+    var buffer = Buffer.alloc(offset + (4 * width * height))
 
     buffer.write("BM", 0, 2)
     buffer.writeUInt32LE(buffer.length, 2) // bmp file length

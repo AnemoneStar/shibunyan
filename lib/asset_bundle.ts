@@ -10,7 +10,7 @@ export default class AssetBundle {
     unityVersion: string
     generatorVersion: string
     assets: Asset[] = []
-    constructor(data: Buffer) {
+    constructor(data: Uint8Array) {
         const reader = new BinaryReader(data)
         this.signature = reader.string()
         this.format = reader.int32S()
@@ -53,18 +53,17 @@ export default class AssetBundle {
                     name: head.string(),
                 }})
 
-                var rawData: Uint8Array = new Uint8Array(0)
+                const rawData = new Uint8Array(blocks.map(b => b.u).reduce((prev, current) => prev+current, 0))
+                var ptr = 0
+                
                 for (let block of blocks) {
                     const unCompData = this.uncompress(reader.read(block.c), block.u, block.flags)
-                    const newData = new Uint8Array(rawData.length + unCompData.length)
-                    newData.set(rawData)
-                    newData.set(unCompData, rawData.length)
-                    rawData = newData
+                    rawData.set(unCompData, ptr)
+                    ptr += unCompData.byteLength
                 }
 
-                for ( let block of assetBlocks) {
-                    const buf = new Buffer(block.size)
-                    buf.set(rawData.slice(block.offset, block.size))
+                for (let block of assetBlocks) {
+                    const buf = rawData.slice(block.offset, block.size + block.offset - 1)
                     const asset = new Asset(buf, block.name)
                     this.assets.push(asset)
                 }
@@ -75,13 +74,13 @@ export default class AssetBundle {
         }
     }
 
-    uncompress(buffer: Buffer, max_dest_size: number, flags: number): Buffer {
+    uncompress(buffer: Uint8Array, max_dest_size: number, flags: number): Uint8Array {
         switch(flags & 0x3f) {
             case 0:
                 return buffer
             case 2:
             case 3:
-                var uncompBuffer = new Buffer(max_dest_size)
+                var uncompBuffer = new Uint8Array(max_dest_size)
                 uncompressBlock(buffer, uncompBuffer)
                 return uncompBuffer
             default:
