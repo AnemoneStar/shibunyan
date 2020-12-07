@@ -13,7 +13,7 @@ export class ErrorBase extends Error {
                 }
             }
         })
-        Error.captureStackTrace(this, this.constructor)
+        if ("captureStackTrace" in Error) Error.captureStackTrace(this, this.constructor)
     }
 }
 
