@@ -189,6 +189,10 @@ export default class Asset {
             reader.jump(pos + node.size)
             r = new ObjectValue(node.name, node.type, reader.endian, value)
         }
+        if (r.type === "string") {
+            const decoder = new TextDecoder()
+            r.value = decoder.decode(new Uint8Array(r.value.map((c: any) => c.value)))
+        }
         if ((node.flags & 0x4000) != 0) reader.align(4)
         return r
     }
