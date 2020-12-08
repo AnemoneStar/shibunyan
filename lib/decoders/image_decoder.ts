@@ -10,7 +10,7 @@ export default class ImageDecoder {
     height: number
     bin: Uint8Array
     reader: BinaryReader
-    bmp: Buffer
+    rgba: Uint8Array
     
     constructor(object: ObjectValue) {
         this.endian = object.endian
@@ -42,7 +42,11 @@ export default class ImageDecoder {
                 throw new NotImplementedError("image fmt: "+fmt)
         }
 
-        this.bmp = bmpGenerator(this.width, this.height, d)
+        this.rgba = d
+    }
+
+    bmp() {
+        return bmpGenerator(this.width, this.height, this.rgba)
     }
 
     decode_rgb24() {
