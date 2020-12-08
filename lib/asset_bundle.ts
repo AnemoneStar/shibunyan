@@ -63,7 +63,7 @@ export default class AssetBundle {
                 }
 
                 for (let block of assetBlocks) {
-                    const buf = rawData.slice(block.offset, block.size + block.offset - 1)
+                    const buf = rawData.slice(block.offset, block.size + block.offset)
                     const asset = new Asset(buf, block.name)
                     this.assets.push(asset)
                 }

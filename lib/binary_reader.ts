@@ -54,6 +54,10 @@ export default class BinaryReader {
         return this.reader.zeroTerminatedString()
     }
 
+    bool() {
+        return this.reader.i8() !== 0
+    }
+
     int8S() {
         return this.reader.i8()
     }

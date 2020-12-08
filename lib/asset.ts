@@ -3,6 +3,7 @@ import TypeTree, { Node } from "./type_tree";
 import { NotImplementedError, TypeTreeDefaultIsNotImplemented } from "./error";
 import class_id from "./constants/class_id";
 import ObjectValue from "./object_value";
+import { safeBigIntToNumber } from "./utils";
 
 export default class Asset {
     format: number
@@ -13,96 +14,96 @@ export default class Asset {
     objects: AssetObjectData[]
     addIds: (number | bigint)[][] = []
     references: AssetReference[] = []
+    comment: string = ""
 
     constructor(data: Uint8Array, public name: string) {
         const reader = new BinaryReader(data)
-        const metadataSize = reader.int32U()
-        const size = reader.int32U()
+        const metaSize = reader.int32U()
+        const fileSize = reader.int32U()
         this.format = reader.int32U()
         const dataOffset = reader.int32U()
-        if (this.format >= 9 && reader.int32S() == 0) {
-            this.endian = Endian.Little
-            reader.endian = this.endian
-        }
-        this.generatorVersion = reader.string()
-        this.targetPlatform = reader.int32S()
-        this.assetClasses = []
-        if (this.format >= 17) {
-            const hasTypeTrees = (reader.int8S() != 0)
-            const typeTreeCount = reader.int32U()
-            for (let i = 0; i<typeTreeCount; i++) {
-                const classId = reader.int32S()
-                reader.skip(1)
-                const scriptId = reader.int16S()
-                const hash = (classId < 0 || classId == 114) ? reader.readString(32) : reader.readString(16)
-                const typeTree = hasTypeTrees ? new TypeTree(reader, this.format) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
-                this.assetClasses.push({
-                    classId,
-                    scriptId,
-                    hash,
-                    typeTree,
-                })
-            }
-        } else if (this.format >= 13) {
-            const hasTypeTrees = reader.int8S() != 0
-            const typeTreeCount = reader.int32U()
-            for (let i = 0; i<typeTreeCount; i++) {
-                const classId = reader.int32S()
-                const hash = classId < 0 ? reader.readString(32) : reader.readString(16)
-                const typeTree = hasTypeTrees ? new TypeTree(reader, this.format) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
-                this.assetClasses.push({
-                    classId,
-                    scriptId: null,
-                    hash,
-                    typeTree
-                })
-            }
+        if (this.format >= 9) {
+            this.endian = reader.bool() ? Endian.Big : Endian.Little
+            reader.skip(3)
         } else {
-            throw new NotImplementedError("asset.format == "+this.format)
+            reader.position = fileSize - metaSize
+            this.endian = reader.bool() ? Endian.Big : Endian.Little
         }
-        const longObjectIds = (this.format >= 14 || (7 <= this.format && this.format <= 13 && reader.int32S() != 0))
+
+        if (this.format >= 22) {
+            const _metaSize = reader.int32U()
+            if (_metaSize !== metaSize) throw new Error("metaSize !== _metaSize")
+            const _fileSize = reader.int64U()
+            if (_fileSize !== BigInt(fileSize)) throw new Error("fileSize !== _fileSize")
+            const _dataOffset = reader.int64U()
+            if (_dataOffset !== BigInt(dataOffset)) throw new Error("dataOffset !== _dataOffset")
+            reader.skip(4)
+        }
+
+        reader.endian = this.endian
+
+        this.generatorVersion = this.format >= 7 ? reader.string() : ""
+        this.targetPlatform = this.format >= 8 ? reader.int32S() : -1
+        this.assetClasses = []
+        const hasTypeTrees = this.format >= 13 ? reader.bool() : true
+        const typeTreeCount = reader.int32U()
+        for (let i = 0; i<typeTreeCount; i++) {
+            const classId = reader.int32S()
+            const stripped = this.format >= 16 ? reader.int8U() : null
+            const scriptId = this.format >= 17 ? reader.int16S() : null
+            const hash = this.format >= 13 ? (this.format < 16 ? classId < 0 : classId === 114) ? reader.readString(32) : reader.readString(16) : null
+            const typeTree = hasTypeTrees ? new TypeTree(reader, this.format) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
+            this.assetClasses.push({
+                classId,
+                stripped,
+                scriptId,
+                hash,
+                typeTree,
+            })
+        }
+        const longObjectIds = this.format >= 14 ? true : this.format >= 7 ? reader.int32S() !== 0 : false
+
         this.objects = []
+
         const objectCount = reader.int32U()
         for (let i = 0; i<objectCount; i++) {
             if (this.format >= 14) reader.align(4)
             const pathId = longObjectIds ? reader.int64S() : reader.int32S()
             // if (Math.abs(pathId) > 2**53) throw new NotImplementedError("pathId > 2**53 ("+pathId+")")
-            const offset = reader.int32U()
+            const offset = this.format >= 22 ? safeBigIntToNumber(reader.int64U()) : reader.int32U()
             const size = reader.int32U()
 
             const now_pos = reader.position
-            reader.jump(dataOffset + offset)
+            reader.jump(dataOffset + safeBigIntToNumber(offset))
             const data = reader.read(size)
             reader.position = now_pos
 
-            const object: AssetObjectData = this.format >= 17
-                ? {pathId, offset, size, typeId: null, classId: null, classIndex: reader.int32U(), destroyed: this.format <= 10 && reader.int16S() != 0, data}
-                : {pathId, offset, size, typeId: reader.int32S(), classId: reader.int16S(), classIndex: null, destroyed: this.format <= 10 && reader.int16S() != 0, data}
+            const object: AssetObjectData = this.format >= 16
+                ? {pathId, offset, size, typeId: null, classId: null, classIndex: reader.int32U(), stripped: this.format === 16 ? reader.bool() : null, data}
+                : {pathId, offset, size, typeId: reader.int32S(), classId: reader.int16S(), classIndex: null, destroyed: reader.int16S() === 1, stripped: this.format === 15 ? reader.bool() : null, data}
             this.objects.push(object)
-            if (11 <= this.format && this.format <= 16) reader.skip(2)
-            if (15 <= this.format && this.format <= 16) reader.skip(1)
         }
 
         if (this.format >= 11) {
             const count = reader.int32U()
             for (let i = 0; i<count; i++) {
                 if (this.format >= 14) reader.align(4)
-                this.addIds.push([longObjectIds ? reader.int64S() : reader.int32S(), reader.int32S()])
+                this.addIds.push([reader.int32U(), longObjectIds ? reader.int64S() : reader.int32S()])
             }
         }
 
-        if (this.format >= 6) {
-            this.references = []
-            const count = reader.int32U()
-            for (let i = 0; i<count; i++) {
-                this.references.push({
-                    path: reader.string(),
-                    guid: reader.read(16),
-                    type: reader.int32S(),
-                    filePath: reader.string(),
-                })
-            }
+        this.references = []
+        const count = reader.int32U()
+        for (let i = 0; i<count; i++) {
+            this.references.push({
+                path: this.format >= 6 ? reader.string() : null,
+                guid: this.format >= 5 ? reader.read(16) : null,
+                type: this.format >= 5 ? reader.int32S() : null,
+                filePath: reader.string(),
+            })
         }
+
+        if (this.format >= 5) this.comment = reader.string()
     }
 
     findAssetClass(obj: AssetObjectData) {
@@ -222,8 +223,9 @@ export interface TypeTreeStack {
 
 export interface AssetClass {
     classId: number
+    stripped: number | null
     scriptId: number | null
-    hash: string
+    hash: string | null
     typeTree: TypeTree
 }
 
@@ -234,13 +236,14 @@ export interface AssetObjectData {
     typeId: number | null
     classId: number | null
     classIndex: number | null
-    destroyed: boolean
+    stripped: boolean | null
+    destroyed?: boolean
     data: Uint8Array
 }
 
 export interface AssetReference {
-    path: string
-    guid: Uint8Array
-    type: number
+    path: string | null
+    guid: Uint8Array | null
+    type: number | null
     filePath: string
 }
