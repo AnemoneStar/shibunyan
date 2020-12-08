@@ -16,7 +16,7 @@ export default class Asset {
     references: AssetReference[] = []
     comment: string = ""
 
-    constructor(data: Uint8Array, public name: string) {
+    constructor(data: Uint8Array, public name: string, public blobs: {[key: string]: Uint8Array | undefined}) {
         const reader = new BinaryReader(data)
         const metaSize = reader.int32U()
         const fileSize = reader.int32U()
@@ -189,12 +189,29 @@ export default class Asset {
             reader.jump(pos + node.size)
             r = new ObjectValue(node.name, node.type, reader.endian, value)
         }
+        if (r.type === "StreamingInfo") {
+            r.value = this.solveStreamingData(r)
+        }
         if (r.type === "string") {
             const decoder = new TextDecoder()
             r.value = decoder.decode(new Uint8Array(r.value.map((c: any) => c.value)))
         }
         if ((node.flags & 0x4000) != 0) reader.align(4)
         return r
+    }
+
+    solveStreamingData(r: ObjectValue) {
+        let path = r["path"].value
+        if (typeof path !== "string") return
+        const prefix = `archive:/${this.name}/`
+        if (path.startsWith(prefix)) path = path.slice(prefix.length)
+        if (path === "") return
+        const blob = this.blobs[path]
+        if (blob == null) return
+        const offset = r["offset"].value
+        const size = r["size"].value
+        if (typeof offset !== "number" || typeof size !== "number") return
+        return blob.slice(offset, offset + size)
     }
 
     static parseTypeTree(assetClass: AssetClass) {

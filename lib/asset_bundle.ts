@@ -10,12 +10,20 @@ export default class AssetBundle {
     unityVersion: string
     generatorVersion: string
     assets: Asset[] = []
+
     constructor(data: Uint8Array) {
         const reader = new BinaryReader(data)
         this.signature = reader.string()
         this.format = reader.int32S()
         this.unityVersion = reader.string()
         this.generatorVersion = reader.string()
+        var assetEntries: {
+            offset: number,
+            size: number,
+            status: number,
+            name: string,
+            isBlob: boolean
+        }[] = []
         switch (this.signature) {
             case "UnityRaw": {
                 const fileSize = reader.int32U()
@@ -29,7 +37,7 @@ export default class AssetBundle {
                     const size = reader.int32U()
                     reader.jump(position + headerSize - 4)
                     const data = reader.read(size)
-                    const asset = new Asset(data, name)
+                    const asset = new Asset(data, name, {})
                     this.assets.push(asset)
                 }
             }
@@ -46,12 +54,18 @@ export default class AssetBundle {
                     c: head.int32U(),
                     flags: head.int16U()
                 }))
-                const assetBlocks = times(head.int32U(), () => { return {
-                    offset: head.safeInt64U(),
-                    size: head.safeInt64U(),
-                    status: head.int32U(),
-                    name: head.string(),
-                }})
+                times(head.int32U(), () => {
+                    const entry = {
+                        offset: head.safeInt64U(),
+                        size: head.safeInt64U(),
+                        status: head.int32U(),
+                        name: head.string(),
+                    }
+                    assetEntries.push({
+                        ...entry,
+                        isBlob: entry.status === 4,
+                    })
+                })
 
                 const rawData = new Uint8Array(blocks.map(b => b.u).reduce((prev, current) => prev+current, 0))
                 var ptr = 0
@@ -62,9 +76,16 @@ export default class AssetBundle {
                     ptr += unCompData.byteLength
                 }
 
-                for (let block of assetBlocks) {
+                // TODO: merge with UnityRaw
+                var blobs: {[key: string]: Uint8Array} = {}
+                for (let block of assetEntries) {
+                    if (block.status === 4) continue
+                    blobs[block.name] = rawData.slice(block.offset, block.size + block.offset)
+                }
+                for (let block of assetEntries) {
+                    if (block.status !== 4) continue
                     const buf = rawData.slice(block.offset, block.size + block.offset)
-                    const asset = new Asset(buf, block.name)
+                    const asset = new Asset(buf, block.name, blobs)
                     this.assets.push(asset)
                 }
             }

@@ -17,6 +17,7 @@ export default class ImageDecoder {
         this.width = object.m_Width.value
         this.height = object.m_Height.value
         this.bin = new Uint8Array(object["image data"].value)
+        if (this.bin.length === 0 && object.m_StreamData != null && object.m_StreamData.value != null) this.bin = new Uint8Array(object.m_StreamData.value)
         const fmt = object["m_TextureFormat"].value
 
         this.reader = new BinaryReader(this.bin)
