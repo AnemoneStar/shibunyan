@@ -92,12 +92,10 @@ export default class ImageDecoder {
 
     decode_etc1() {
         const l = this.width * this.height * 4
-        var re = new Uint8Array(l)
         const bw = Math.floor((this.width + 3) / 4)
         const bh = Math.floor((this.height + 3) / 4)
         const br = new Uint8ClampedArray((bw * 4) * (bh * 4) * 4)
         const reader = new DataView(this.bin.buffer)
-        const block = new Uint8ClampedArray(4 * 4 * 3) // 24bit * width=4 * height=4
         let c = -4
         for (let i=3; i<br.length; i+=4) {
             br[i] = 255
@@ -142,8 +140,5 @@ export default class ImageDecoder {
         this.width = bw * 4
         this.height = bh * 4
         return new Uint8Array(br.buffer)
-    }
-
-    decode_etc1_block(up: number, down: number, mem: Uint8ClampedArray) {
     }
 }
