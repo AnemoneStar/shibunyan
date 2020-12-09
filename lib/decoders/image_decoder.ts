@@ -95,7 +95,7 @@ export default class ImageDecoder {
         var re = new Uint8Array(l)
         const bw = Math.floor((this.width + 3) / 4)
         const bh = Math.floor((this.height + 3) / 4)
-        const br = new Uint8Array((bw * 4) * (bh * 4) * 4)
+        const br = new Uint8ClampedArray((bw * 4) * (bh * 4) * 4)
         const reader = new DataView(this.bin.buffer)
         const block = new Uint8ClampedArray(4 * 4 * 3) // 24bit * width=4 * height=4
         let c = -4
@@ -106,68 +106,44 @@ export default class ImageDecoder {
             const by = by_ * 4
             for (let bx_ = 0; bx_ < bw; bx_++) {
                 const bx = bx_ * 4
-                this.decode_etc1_block(reader.getUint32(c+=4, false), reader.getUint32(c+=4, false), block)
-                // 24bit 4x4x3 = 48
-                for (let y=0; y<4; y++) {
-                    for (let x=0; x<4; x++) {
-                        const loc = ((4 * x) + y) * 3
+                const up = reader.getUint32(c+=4, false), down=reader.getUint32(c+=4, false)
+                const codes = [up >> 5 & 7, up >> 2 & 7]
+                const subblocks = Etc1SubblockTable[up & 1]
+                let color0 = 0, color1 = 0
+                if (up & 2) {
+                    color0 = up >> 8 & 0xf8f8f8
+                    const dr = (up >> 24 & 3) - (up >> 24 & 4)
+                    const dg = (up >> 16 & 3) - (up >> 16 & 4)
+                    const db = (up >> 8 & 3) - (up >> 8 & 4)
+                    color1 = color0 + (dr << 19) + (dg << 11) + (db << 3)
+                    color0 = color0 | (color0 >> 5 & 0x70707)
+                    color1 = color1 | (color1 >> 5 & 0x70707)
+                } else {
+                    color0 = up >> 8 & 0xf0f0f0
+                    color0 = color0 | color0 >> 4
+                    color1 = up >> 4 & 0xf0f0f0
+                    color1 = color1 | color1 >> 4
+                }
+                for (let x=0; x<4; x++) {
+                    for (let y=0; y<4; y++) {
+                        const i = (x * 4) + y
                         const b = 4 * (bx + x + ((bw * 4) * (by + y)))
-                        for (let c=0; c<3; c++) {
-                            br[b + c] = block[loc + c]
-                        }
+                        const modifier_ = Etc1ModifierTable[codes[subblocks[i]]][(down >> i) & 1]
+                        const color = subblocks[i] ? color1 : color0
+                        const modifier = ((down >> (i + 16)) & 1) == 0 ? modifier_ : -modifier_
+                        br[b + 0] = (color >> 16 & 0xff) + modifier
+                        br[b + 1] = (color >> 8 & 0xff) + modifier
+                        br[b + 2] = (color & 0xff) + modifier
                     }
                 }
             }
         }
-        // times(bh, (by) => {
-        //     by = by * 4
-        //     times(bw, (bx) => {
-        //         bx = bx * 4
-        //         const block = this.decode_etc1_block(this.reader.read(8))
-        //         // 24bit 4x4x3 = 48
-        //         times(4, (y) => {
-        //             times(4, (x) => {
-        //                 const loc = ((4 * x) + y) * 3
-        //                 const b = 4 * (bx + x + ((bw * 4) * (by + y)))
-        //                 times(3, (c) => {
-        //                     br[b + c] = block[loc + c] & 0xff
-        //                 })
-        //                 br[b + 3] = 255
-        //             })
-        //         })
-        //     })
-        // })
         // TODO: ちゃんとリッピングする
         this.width = bw * 4
         this.height = bh * 4
-        return br
+        return new Uint8Array(br.buffer)
     }
 
     decode_etc1_block(up: number, down: number, mem: Uint8ClampedArray) {
-        const codes = [up >> 5 & 7, up >> 2 & 7]
-        const subblocks = Etc1SubblockTable[up & 1]
-        let color0 = 0, color1 = 0
-        if (up & 2) {
-            color0 = up >> 8 & 0xf8f8f8
-            const dr = (up >> 24 & 3) - (up >> 24 & 4)
-            const dg = (up >> 16 & 3) - (up >> 16 & 4)
-            const db = (up >> 8 & 3) - (up >> 8 & 4)
-            color1 = color0 + (dr << 19) + (dg << 11) + (db << 3)
-            color0 = color0 | (color0 >> 5 & 0x70707)
-            color1 = color1 | (color1 >> 5 & 0x70707)
-        } else {
-            color0 = up >> 8 & 0xf0f0f0
-            color0 = color0 | color0 >> 4
-            color1 = up >> 4 & 0xf0f0f0
-            color1 = color1 | color1 >> 4
-        }
-        for (let i=0; i<16; i++) {
-            const modifier_ = Etc1ModifierTable[codes[subblocks[i]]][(down >> i) & 1]
-            const color = subblocks[i] ? color1 : color0
-            const modifier = ((down >> (i + 16)) & 1) == 0 ? modifier_ : -modifier_
-            mem[(i * 3) + 0] = (color >> 16 & 0xff) + modifier
-            mem[(i * 3) + 1] = (color >> 8 & 0xff) + modifier
-            mem[(i * 3) + 2] = (color & 0xff) + modifier
-        }
     }
 }
