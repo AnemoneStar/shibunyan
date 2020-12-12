@@ -10,6 +10,7 @@
 
 - rgba24
 - rgba4444
+- rgba32 (8888)
 - rgb565
 - etc1
 

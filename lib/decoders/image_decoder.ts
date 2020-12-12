@@ -32,6 +32,8 @@ export default class ImageDecoder {
             case 3:
                 d = this.decode_rgb24()
                 break
+            case 4:
+                d = this.decode_rgba32()
             case 7:
                 d = this.decode_rgb565()
                 break
@@ -62,6 +64,10 @@ export default class ImageDecoder {
             re[i + 3] = 255
         }
         return re
+    }
+
+    decode_rgba32() {
+        return this.bin
     }
 
     decode_rgb565() {
