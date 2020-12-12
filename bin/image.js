@@ -8,7 +8,7 @@ for (const asset of assetBundle.assets) {
     for (const obj of asset.objects) {
         if (asset.objectType(obj) !== "Texture2D") continue
         const image = new shibunyan.ImageDecoder(asset.parseObject(obj))
-        fs.writeFileSync("out."+cnt+".bmp", image.bmp)
+        fs.writeFileSync("out."+cnt+".bmp", image.bmp())
         console.log("out."+cnt+".bmp")
         cnt++
     }
