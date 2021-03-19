@@ -4,22 +4,22 @@ import string_table from "./constants/string_table";
 export default class TypeTree {
     nodes: Node[] = []
     constructor(reader: BinaryReader, version: number) {
-        const nodeCount = reader.int32U()
-        const bufferSize = reader.int32U()
+        const nodeCount = reader.u32()
+        const bufferSize = reader.u32()
         const nodes = []
         for (let i = 0; i<nodeCount; i++) {
             nodes.push({
-                version: reader.int16U(),
-                depth: reader.int8U(),
-                isArray: reader.int8U() != 0,
-                type: reader.int32S(),
-                name: reader.int32S(),
-                size: reader.int32S(),
-                index: reader.int32U(),
-                flags: reader.int32U(),
+                version: reader.u16(),
+                depth: reader.u8(),
+                isArray: reader.u8() != 0,
+                type: reader.i32(),
+                name: reader.i32(),
+                size: reader.i32(),
+                index: reader.u32(),
+                flags: reader.u32(),
             })
         }
-        const bufferReader = new BinaryReader(reader.read(bufferSize))
+        const bufferReader = new BinaryReader(new DataView(reader.read(bufferSize)))
         this.nodes = nodes.map(node => {
             var overwrite= {
                 type: node.type.toString(),
@@ -27,13 +27,13 @@ export default class TypeTree {
             }
             if (node.type >= 0) {
                 bufferReader.jump(node.type)
-                overwrite.type = bufferReader.string()
+                overwrite.type = bufferReader.zeroTerminatedString()
             } else {
                 overwrite.type = string_table[(node.type + 2**31).toString()]
             }
             if (node.name >= 0) {
                 bufferReader.jump(node.name)
-                overwrite.name = bufferReader.string()
+                overwrite.name = bufferReader.zeroTerminatedString()
             } else {
                 overwrite.name = string_table[(node.name + 2**31).toString()]
             }

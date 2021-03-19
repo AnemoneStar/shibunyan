@@ -16,41 +16,41 @@ export default class Asset {
     references: AssetReference[] = []
     comment: string = ""
 
-    constructor(data: Uint8Array, public name: string, public blobs: {[key: string]: Uint8Array | undefined}) {
-        const reader = new BinaryReader(data)
-        const metaSize = reader.int32U()
-        const fileSize = reader.int32U()
-        this.format = reader.int32U()
-        const dataOffset = reader.int32U()
+    constructor(data: ArrayBufferView, public name: string, public blobs: {[key: string]: Uint8Array | undefined}) {
+        const reader = new BinaryReader(new DataView(data.buffer))
+        const metaSize = reader.u32()
+        const fileSize = reader.u32()
+        this.format = reader.u32()
+        const dataOffset = reader.u32()
         if (this.format >= 9) {
             this.endian = reader.bool() ? Endian.Big : Endian.Little
             reader.skip(3)
         } else {
-            reader.position = fileSize - metaSize
+            reader.pointer = fileSize - metaSize
             this.endian = reader.bool() ? Endian.Big : Endian.Little
         }
 
         if (this.format >= 22) {
-            const _metaSize = reader.int32U()
+            const _metaSize = reader.u32()
             if (_metaSize !== metaSize) throw new Error("metaSize !== _metaSize")
-            const _fileSize = reader.int64U()
+            const _fileSize = reader.u64()
             if (_fileSize !== BigInt(fileSize)) throw new Error("fileSize !== _fileSize")
-            const _dataOffset = reader.int64U()
+            const _dataOffset = reader.u64()
             if (_dataOffset !== BigInt(dataOffset)) throw new Error("dataOffset !== _dataOffset")
             reader.skip(4)
         }
 
-        reader.endian = this.endian
+        reader.isLittleEndian = this.endian == Endian.Little
 
-        this.generatorVersion = this.format >= 7 ? reader.string() : ""
-        this.targetPlatform = this.format >= 8 ? reader.int32S() : -1
+        this.generatorVersion = this.format >= 7 ? reader.zeroTerminatedString() : ""
+        this.targetPlatform = this.format >= 8 ? reader.i32() : -1
         this.assetClasses = []
         const hasTypeTrees = this.format >= 13 ? reader.bool() : true
-        const typeTreeCount = reader.int32U()
+        const typeTreeCount = reader.u32()
         for (let i = 0; i<typeTreeCount; i++) {
-            const classId = reader.int32S()
-            const stripped = this.format >= 16 ? reader.int8U() : null
-            const scriptId = this.format >= 17 ? reader.int16S() : null
+            const classId = reader.i32()
+            const stripped = this.format >= 16 ? reader.u8() : null
+            const scriptId = this.format >= 17 ? reader.i16() : null
             const hash = this.format >= 13 ? (this.format < 16 ? classId < 0 : classId === 114) ? reader.readString(32) : reader.readString(16) : null
             const typeTree = hasTypeTrees ? new TypeTree(reader, this.format) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
             this.assetClasses.push({
@@ -61,49 +61,49 @@ export default class Asset {
                 typeTree,
             })
         }
-        const longObjectIds = this.format >= 14 ? true : this.format >= 7 ? reader.int32S() !== 0 : false
+        const longObjectIds = this.format >= 14 ? true : this.format >= 7 ? reader.i32() !== 0 : false
 
         this.objects = []
 
-        const objectCount = reader.int32U()
+        const objectCount = reader.u32()
         for (let i = 0; i<objectCount; i++) {
             if (this.format >= 14) reader.align(4)
-            const pathId = longObjectIds ? reader.int64S() : reader.int32S()
+            const pathId = longObjectIds ? reader.i64() : reader.i32()
             // if (Math.abs(pathId) > 2**53) throw new NotImplementedError("pathId > 2**53 ("+pathId+")")
-            const offset = this.format >= 22 ? safeBigIntToNumber(reader.int64U()) : reader.int32U()
-            const size = reader.int32U()
+            const offset = this.format >= 22 ? safeBigIntToNumber(reader.u64()) : reader.u32()
+            const size = reader.u32()
 
-            const now_pos = reader.position
+            const now_pos = reader.pointer
             reader.jump(dataOffset + safeBigIntToNumber(offset))
             const data = reader.read(size)
-            reader.position = now_pos
+            reader.pointer = now_pos
 
             const object: AssetObjectData = this.format >= 16
-                ? {pathId, offset, size, typeId: null, classId: null, classIndex: reader.int32U(), stripped: this.format === 16 ? reader.bool() : null, data}
-                : {pathId, offset, size, typeId: reader.int32S(), classId: reader.int16S(), classIndex: null, destroyed: reader.int16S() === 1, stripped: this.format === 15 ? reader.bool() : null, data}
+                ? {pathId, offset, size, typeId: null, classId: null, classIndex: reader.u32(), stripped: this.format === 16 ? reader.bool() : null, data}
+                : {pathId, offset, size, typeId: reader.i32(), classId: reader.i16(), classIndex: null, destroyed: reader.i16() === 1, stripped: this.format === 15 ? reader.bool() : null, data}
             this.objects.push(object)
         }
 
         if (this.format >= 11) {
-            const count = reader.int32U()
+            const count = reader.u32()
             for (let i = 0; i<count; i++) {
                 if (this.format >= 14) reader.align(4)
-                this.addIds.push([reader.int32U(), longObjectIds ? reader.int64S() : reader.int32S()])
+                this.addIds.push([reader.u32(), longObjectIds ? reader.i64() : reader.i32()])
             }
         }
 
         this.references = []
-        const count = reader.int32U()
+        const count = reader.u32()
         for (let i = 0; i<count; i++) {
             this.references.push({
-                path: this.format >= 6 ? reader.string() : null,
-                guid: this.format >= 5 ? reader.read(16) : null,
-                type: this.format >= 5 ? reader.int32S() : null,
-                filePath: reader.string(),
+                path: this.format >= 6 ? reader.zeroTerminatedString() : null,
+                guid: this.format >= 5 ? new Uint8Array(reader.read(16)) : null,
+                type: this.format >= 5 ? reader.i32() : null,
+                filePath: reader.zeroTerminatedString(),
             })
         }
 
-        if (this.format >= 5) this.comment = reader.string()
+        if (this.format >= 5) this.comment = reader.zeroTerminatedString()
     }
 
     findAssetClass(obj: AssetObjectData) {
@@ -127,8 +127,8 @@ export default class Asset {
         if (!assetClass) return undefined
         const typeTree = Asset.parseTypeTree(assetClass)
         if (!typeTree) return undefined
-        const reader = new BinaryReader(obj.data)
-        reader.endian = this.endian
+        const reader = new BinaryReader(new DataView(obj.data))
+        reader.isLittleEndian = this.endian == Endian.Little
         return this.parseObjectPrivate(reader, typeTree)
     }
 
@@ -143,7 +143,7 @@ export default class Asset {
             const dataTypeTree = children.find(e => e.name == "data")!
             // TODO: support more types
             if (dataTypeTree.node.type === "char" || dataTypeTree.node.type === "UInt8") {
-                data = reader.read(size)
+                data = new Uint8Array(reader.read(size))
             } else if (dataTypeTree.node.type == "UInt16" || dataTypeTree.node.type == "unsigned short") {
                 data = new Uint16Array(reader.read(size * 2))
             } else if (dataTypeTree.node.type == "UInt32" || dataTypeTree.node.type == "unsigned int") {
@@ -180,27 +180,27 @@ export default class Asset {
                 }
             }
         } else if (children.length > 0) {
-            const pos = reader.position
+            const pos = reader.pointer
             r = new ObjectValue(node.name, node.type, reader.endian)
             r.isStruct = true
             for (const child of children) {
                 r![child.name] = this.parseObjectPrivate(reader, child)
             }
         } else {
-            const pos = reader.position
+            const pos = reader.pointer
             var value = 
-                node.type == "bool" ? reader.int8S() != 0
-            :   node.type == "SInt8" ? reader.int8S()
-            :   node.type == "UInt8" || node.type == "char" ? reader.int8U()
-            :   node.type == "SInt16" || node.type == "short" ? reader.int16S()
-            :   node.type == "UInt16" || node.type == "unsigned short" ? reader.int16U()
-            :   node.type == "SInt32" || node.type == "int" ? reader.int32S()
-            :   node.type == "UInt32" || node.type == "unsigned int" ? reader.int32U()
-            :   node.type == "SInt64" || node.type == "long long" ? reader.int64S()
-            :   node.type == "UInt64" || node.type == "unsigned long long" ? reader.int64U()
+                node.type == "bool" ? reader.i8() != 0
+            :   node.type == "SInt8" ? reader.i8()
+            :   node.type == "UInt8" || node.type == "char" ? reader.u8()
+            :   node.type == "SInt16" || node.type == "short" ? reader.i16()
+            :   node.type == "UInt16" || node.type == "unsigned short" ? reader.u16()
+            :   node.type == "SInt32" || node.type == "int" ? reader.i32()
+            :   node.type == "UInt32" || node.type == "unsigned int" ? reader.u32()
+            :   node.type == "SInt64" || node.type == "long long" ? reader.i64()
+            :   node.type == "UInt64" || node.type == "unsigned long long" ? reader.u64()
             :   node.type == "float" ? reader.float()
             :   node.type == "double" ? reader.double()
-            :   node.type == "ColorRGBA" ? [reader.int8U(), reader.int8U(), reader.int8U(), reader.int8U()]
+            :   node.type == "ColorRGBA" ? [reader.u8(), reader.u8(), reader.u8(), reader.u8()]
             :   reader.read(node.size)
             reader.jump(pos + node.size)
             r = new ObjectValue(node.name, node.type, reader.endian, value)
@@ -271,7 +271,7 @@ export interface AssetObjectData {
     classIndex: number | null
     stripped: boolean | null
     destroyed?: boolean
-    data: Uint8Array
+    data: ArrayBuffer
 }
 
 export interface AssetReference {

@@ -23,8 +23,8 @@ export default class ImageDecoder {
         if (this.bin.length === 0 && object.m_StreamData != null && object.m_StreamData.value != null) this.bin = new Uint8Array(object.m_StreamData.value)
         const fmt = object["m_TextureFormat"].value
 
-        this.reader = new BinaryReader(this.bin)
-        this.reader.endian = object["image data"].endian
+        this.reader = new BinaryReader(new DataView(this.bin.buffer))
+        this.reader.isLittleEndian = object["image data"].endian == Endian.Little
         
         var d: Uint8Array | undefined
 
@@ -58,9 +58,9 @@ export default class ImageDecoder {
         const l = this.width * this.height * 4
         var re = new Uint8Array(l)
         for (let i=0; i<l; i+=4) {
-            re[i + 0] = this.reader.int8U()
-            re[i + 1] = this.reader.int8U()
-            re[i + 2] = this.reader.int8U()
+            re[i + 0] = this.reader.u8()
+            re[i + 1] = this.reader.u8()
+            re[i + 2] = this.reader.u8()
             re[i + 3] = 255
         }
         return re
@@ -74,7 +74,7 @@ export default class ImageDecoder {
         const l = this.width * this.height * 4
         var re = new Uint8Array(l)
         for (let i = 0; i<l; i+=4) {
-            const c = this.reader.int16U()
+            const c = this.reader.u16()
             re[i + 0] = (c & 0b1111100000000000) >> 8
             re[i + 1] = (c & 0b0000011111100000) >> 3
             re[i + 2] = (c & 0b0000000000011111) << 3
@@ -87,7 +87,7 @@ export default class ImageDecoder {
         const l = this.width * this.height * 4
         var re = new Uint8Array(l)
         for (let i = 0; i<l; i+=4) {
-            const c = this.reader.int16U()
+            const c = this.reader.u16()
             re[i + 0] = (c & 0xf000) >> 8
             re[i + 1] = (c & 0x0f00) >> 4
             re[i + 2] = (c & 0x00f0)

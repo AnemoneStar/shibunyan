@@ -11,12 +11,12 @@ export default class AssetBundle {
     generatorVersion: string
     assets: Asset[] = []
 
-    constructor(data: Uint8Array) {
-        const reader = new BinaryReader(data)
-        this.signature = reader.string()
-        this.format = reader.int32S()
-        this.unityVersion = reader.string()
-        this.generatorVersion = reader.string()
+    constructor(data: ArrayBufferView) {
+        const reader = new BinaryReader(new DataView(data.buffer))
+        this.signature = reader.zeroTerminatedString()
+        this.format = reader.i32()
+        this.unityVersion = reader.zeroTerminatedString()
+        this.generatorVersion = reader.zeroTerminatedString()
         var assetEntries: {
             offset: number,
             size: number,
@@ -26,40 +26,40 @@ export default class AssetBundle {
         }[] = []
         switch (this.signature) {
             case "UnityRaw": {
-                const fileSize = reader.int32U()
-                const headerSize = reader.int32U()
+                const fileSize = reader.u32()
+                const headerSize = reader.u32()
                 reader.jump(headerSize)
-                const assetCount = reader.int32U()
+                const assetCount = reader.u32()
                 for (let i = 0; i < assetCount; i++) {
-                    const position = reader.position
-                    const name = reader.string()
-                    const headerSize = reader.int32U()
-                    const size = reader.int32U()
+                    const position = reader.pointer
+                    const name = reader.zeroTerminatedString()
+                    const headerSize = reader.u32()
+                    const size = reader.u32()
                     reader.jump(position + headerSize - 4)
                     const data = reader.read(size)
-                    const asset = new Asset(data, name, {})
+                    const asset = new Asset(new Uint8Array(data), name, {})
                     this.assets.push(asset)
                 }
             }
             break
             case "UnityFS": {
-                const fileSize = reader.int64U()
-                const ciBlockSize = reader.int32U()
-                const uiBlockSize = reader.int32U()
-                const flags = reader.int32U()
-                const head = new BinaryReader(this.uncompress(reader.read(ciBlockSize), uiBlockSize, flags))
+                const fileSize = reader.u64()
+                const ciBlockSize = reader.u32()
+                const uiBlockSize = reader.u32()
+                const flags = reader.u32()
+                const head = new BinaryReader(new DataView(this.uncompress(reader.read(ciBlockSize), uiBlockSize, flags)))
                 const guid = head.read(16)
-                const blocks = times(head.int32U(), () => ({
-                    u: head.int32U(),
-                    c: head.int32U(),
-                    flags: head.int16U()
+                const blocks = times(head.u32(), () => ({
+                    u: head.u32(),
+                    c: head.u32(),
+                    flags: head.u16()
                 }))
-                times(head.int32U(), () => {
+                times(head.u32(), () => {
                     const entry = {
                         offset: head.safeInt64U(),
                         size: head.safeInt64U(),
-                        status: head.int32U(),
-                        name: head.string(),
+                        status: head.u32(),
+                        name: head.zeroTerminatedString(),
                     }
                     assetEntries.push({
                         ...entry,
@@ -72,7 +72,7 @@ export default class AssetBundle {
                 
                 for (let block of blocks) {
                     const unCompData = this.uncompress(reader.read(block.c), block.u, block.flags)
-                    rawData.set(unCompData, ptr)
+                    rawData.set(new Uint8Array(unCompData), ptr)
                     ptr += unCompData.byteLength
                 }
 
@@ -95,15 +95,15 @@ export default class AssetBundle {
         }
     }
 
-    uncompress(buffer: Uint8Array, max_dest_size: number, flags: number): Uint8Array {
+    uncompress(buffer: ArrayBuffer, max_dest_size: number, flags: number): ArrayBuffer {
         switch(flags & 0x3f) {
             case 0:
                 return buffer
             case 2:
             case 3:
                 var uncompBuffer = new Uint8Array(max_dest_size)
-                uncompressBlock(buffer, uncompBuffer)
-                return uncompBuffer
+                uncompressBlock(new Uint8Array(buffer), uncompBuffer)
+                return uncompBuffer.buffer
             default:
                 console.warn("unknown flag: "+flags.toString(16))
                 return buffer
