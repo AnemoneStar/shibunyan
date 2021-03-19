@@ -138,14 +138,28 @@ export default class Asset {
         var children = typeTree.children
 
         if (node.isArray) {
-            var data = []
+            var data: ObjectValue[] | Uint8Array | Uint16Array | Uint32Array | Int32Array | Float32Array
             const size = this.parseObjectPrivate(reader, children.find(e => e.name == "size")!).value as number
             const dataTypeTree = children.find(e => e.name == "data")!
-            for (let i = 0; i<size; i++) {
-                data.push(this.parseObjectPrivate(reader, dataTypeTree))
+            // TODO: support more types
+            if (dataTypeTree.node.type === "char" || dataTypeTree.node.type === "UInt8") {
+                data = reader.read(size)
+            } else if (dataTypeTree.node.type == "UInt16" || dataTypeTree.node.type == "unsigned short") {
+                data = new Uint16Array(reader.read(size * 2))
+            } else if (dataTypeTree.node.type == "UInt32" || dataTypeTree.node.type == "unsigned int") {
+                data = new Uint32Array(reader.read(size * 4))
+            } else if (dataTypeTree.node.type == "SInt32" || dataTypeTree.node.type == "int") {
+                data = new Int32Array(reader.read(size * 4))
+            } else if (dataTypeTree.node.type == "float") {
+                data = new Float32Array(reader.read(size * 4))
+            } else {
+                let arr = []
+                for (let i = 0; i<size; i++) {
+                    arr.push(this.parseObjectPrivate(reader, dataTypeTree))
+                }
+                if (node.type == "TypelessData") throw new NotImplementedError("typelessdata")
+                data = arr
             }
-            // if (node.type == "TypelessData") throw new NotImplementedError("typelessdata")
-            if (node.type == "TypelessData") data = data.map(e => e.value as number)
             r = new ObjectValue(
                 node.name,
                 node.type,
@@ -156,20 +170,22 @@ export default class Asset {
             r = new ObjectValue(node.name, node.type, reader.endian)
             if (children.length == 1 && children[0].name == "Array" && children[0].node.type == "Array" && children[0].node.isArray) {
                 r.value = this.parseObjectPrivate(reader, children[0]).value
-                // if (node.type == "string") r.value = r.value.map(e => e.value)
-                if (node.type == "string") new NotImplementedError("node.type == string")
+                if (node.type == "string") {
+                    const decoder = new TextDecoder()
+                    r.value = decoder.decode(r.value)
+                }
             } else {
-                children.forEach(child => {
+                for (const child of children) {
                     r![child.name] = this.parseObjectPrivate(reader, child)
-                })
+                }
             }
         } else if (children.length > 0) {
             const pos = reader.position
             r = new ObjectValue(node.name, node.type, reader.endian)
             r.isStruct = true
-            children.forEach(child => {
+            for (const child of children) {
                 r![child.name] = this.parseObjectPrivate(reader, child)
-            })
+            }
         } else {
             const pos = reader.position
             var value = 
@@ -191,10 +207,6 @@ export default class Asset {
         }
         if (r.type === "StreamingInfo") {
             r.value = this.solveStreamingData(r)
-        }
-        if (r.type === "string") {
-            const decoder = new TextDecoder()
-            r.value = decoder.decode(new Uint8Array(r.value.map((c: any) => c.value)))
         }
         if ((node.flags & 0x4000) != 0) reader.align(4)
         return r

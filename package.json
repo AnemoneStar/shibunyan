@@ -1,6 +1,6 @@
 {
   "name": "shibunyan",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "mikunyan in TypeScript",
   "main": "dist/index.js",
   "scripts": {
