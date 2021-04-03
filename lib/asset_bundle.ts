@@ -44,10 +44,11 @@ export default class AssetBundle {
             break
             case "UnityFS": {
                 const fileSize = reader.u64()
-                const ciBlockSize = reader.u32()
-                const uiBlockSize = reader.u32()
+                const compressedBlockSize = reader.u32()
+                const uncompressedBlockSize = reader.u32()
                 const flags = reader.u32()
-                const head = new BinaryReader(new DataView(this.uncompress(reader.read(ciBlockSize), uiBlockSize, flags)))
+                if (this.format >= 7) reader.align(16)
+                const head = new BinaryReader(new DataView(this.uncompress(reader.read(compressedBlockSize), uncompressedBlockSize, flags)))
                 const guid = head.read(16)
                 const blocks = times(head.u32(), () => ({
                     u: head.u32(),
