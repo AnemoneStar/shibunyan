@@ -18,10 +18,11 @@ export default class Asset {
 
     constructor(data: ArrayBufferView, public name: string, public blobs: {[key: string]: Uint8Array | undefined}) {
         const reader = new BinaryReader(new DataView(data.buffer))
-        const metaSize = reader.u32()
-        const fileSize = reader.u32()
+        let metaSize = reader.u32()
+        let fileSize: number | bigint = reader.u32()
         this.format = reader.u32()
-        const dataOffset = reader.u32()
+        console.log(this.format)
+        let dataOffset = reader.u32()
         if (this.format >= 9) {
             this.endian = reader.bool() ? Endian.Big : Endian.Little
             reader.skip(3)
@@ -32,12 +33,24 @@ export default class Asset {
 
         if (this.format >= 22) {
             const _metaSize = reader.u32()
-            if (_metaSize !== metaSize) throw new Error("metaSize !== _metaSize")
+            if (metaSize === 0) {
+                metaSize = _metaSize
+            } else if (_metaSize !== metaSize) {
+                throw new Error(`metaSize !== _metaSize (metaSize=${metaSize}, _metaSize=${_metaSize})`)
+            }
             const _fileSize = reader.u64()
-            if (_fileSize !== BigInt(fileSize)) throw new Error("fileSize !== _fileSize")
-            const _dataOffset = reader.u64()
-            if (_dataOffset !== BigInt(dataOffset)) throw new Error("dataOffset !== _dataOffset")
-            reader.skip(4)
+            if (fileSize === 0) {
+                fileSize = _fileSize
+            } else if (_fileSize !== BigInt(fileSize)) {
+                throw new Error(`fileSize !== _fileSize (fileSize=${fileSize}, _fileSize=${_fileSize})`)
+            }
+            const _dataOffset = reader.safeInt64S()
+            if (dataOffset === 0) {
+                dataOffset = _dataOffset
+            } else if (_dataOffset !== dataOffset) {
+                throw new Error(`dataOffset !== _dataOffset (dataOffset=${dataOffset}, _dataOffset=${_dataOffset})`)
+            }
+            reader.skip(8)
         }
 
         reader.isLittleEndian = this.endian == Endian.Little
