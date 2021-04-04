@@ -4,6 +4,7 @@ import string_table from "./constants/string_table";
 export default class TypeTree {
     nodes: Node[] = []
     constructor(reader: BinaryReader, version: number) {
+        if (version < 10 || version === 11) throw new Error(`this typetree version(${version}) is not supported`)
         const nodeCount = reader.u32()
         const bufferSize = reader.u32()
         const nodes = []
@@ -11,17 +12,18 @@ export default class TypeTree {
             nodes.push({
                 version: reader.u16(),
                 depth: reader.u8(),
-                isArray: reader.u8() != 0,
+                isArray: reader.bool(),
                 type: reader.i32(),
                 name: reader.i32(),
                 size: reader.i32(),
                 index: reader.u32(),
                 flags: reader.u32(),
+                v18meta: version >= 18 ? reader.u64() : undefined,
             })
         }
         const bufferReader = new BinaryReader(new DataView(reader.read(bufferSize)))
         this.nodes = nodes.map(node => {
-            var overwrite= {
+            var overwrite = {
                 type: node.type.toString(),
                 name: node.name.toString()
             }
@@ -39,6 +41,9 @@ export default class TypeTree {
             }
             return Object.assign(node, overwrite)
         })
+        if (version >= 21) {
+            reader.skip(4)
+        }
     }
 }
 
@@ -51,4 +56,5 @@ export interface Node {
     size: number
     index: number
     flags: number
+    v18meta?: bigint
 }

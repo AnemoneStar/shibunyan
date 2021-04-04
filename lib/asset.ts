@@ -10,7 +10,7 @@ export default class Asset {
     generatorVersion: string
     targetPlatform: number
     endian: Endian = Endian.Big
-    assetClasses: AssetClass[]
+    assetClasses: AssetClass[] = []
     objects: AssetObjectData[]
     addIds: (number | bigint)[][] = []
     references: AssetReference[] = []
@@ -57,12 +57,11 @@ export default class Asset {
 
         this.generatorVersion = this.format >= 7 ? reader.zeroTerminatedString() : ""
         this.targetPlatform = this.format >= 8 ? reader.i32() : -1
-        this.assetClasses = []
         const hasTypeTrees = this.format >= 13 ? reader.bool() : true
         const typeTreeCount = reader.u32()
         for (let i = 0; i<typeTreeCount; i++) {
             const classId = reader.i32()
-            const stripped = this.format >= 16 ? reader.u8() : null
+            const stripped = this.format >= 16 ? reader.bool() : null
             const scriptId = this.format >= 17 ? reader.i16() : null
             const hash = this.format >= 13 ? (this.format < 16 ? classId < 0 : classId === 114) ? reader.readString(32) : reader.readString(16) : null
             const typeTree = hasTypeTrees ? new TypeTree(reader, this.format) : (() => {throw new TypeTreeDefaultIsNotImplemented("")})()
@@ -269,7 +268,7 @@ export interface TypeTreeStack {
 
 export interface AssetClass {
     classId: number
-    stripped: number | null
+    stripped: boolean | null
     scriptId: number | null
     hash: string | null
     typeTree: TypeTree
