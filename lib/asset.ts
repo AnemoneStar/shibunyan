@@ -5,6 +5,27 @@ import class_id from "./constants/class_id";
 import ObjectValue from "./object_value";
 import { safeBigIntToNumber } from "./utils";
 
+function parseTypeTree(typeTree?: TypeTree): TypeTreeStack | undefined {
+    if (typeTree == null) return
+    const nodes = typeTree.nodes
+    var tree: TypeTreeStack | undefined
+    var stack: TypeTreeStack[] = []
+    for (const node of nodes) {
+        const self = {
+            name: node.name,
+            node,
+            children: []
+        }
+        if (node.depth == 0) {
+            tree = self
+        } else {
+            stack[node.depth - 1].children.push(self)
+        }
+        stack[node.depth] = self
+    }
+    return tree
+}
+
 export default class Asset {
     format: number
     generatorVersion: string
@@ -71,6 +92,7 @@ export default class Asset {
                 scriptId,
                 hash,
                 typeTree,
+                parsedTypeTree: parseTypeTree(typeTree),
             })
         }
         const longObjectIds = this.format >= 14 ? true : this.format >= 7 ? reader.i32() !== 0 : false
@@ -135,13 +157,11 @@ export default class Asset {
     }
 
     parseObject(obj: AssetObjectData) {
-        const assetClass = this.findAssetClass(obj)
-        if (!assetClass) return undefined
-        const typeTree = Asset.parseTypeTree(assetClass)
-        if (!typeTree) return undefined
+        const typeTreeStack = this.findAssetClass(obj)?.parsedTypeTree
+        if (typeTreeStack == null) return undefined
         const reader = new BinaryReader(new DataView(obj.data))
         reader.isLittleEndian = this.endian == Endian.Little
-        return this.parseObjectPrivate(reader, typeTree)
+        return this.parseObjectPrivate(reader, typeTreeStack)
     }
 
     private parseObjectPrivate(reader: BinaryReader, typeTree: TypeTreeStack): ObjectValue {
@@ -237,27 +257,6 @@ export default class Asset {
         if (typeof offset !== "number" || typeof size !== "number") return
         return blob.slice(offset, offset + size)
     }
-
-    static parseTypeTree(assetClass: AssetClass) {
-        if (assetClass.typeTree == null) return undefined
-        const nodes = assetClass.typeTree.nodes
-        var tree: TypeTreeStack | undefined
-        var stack: TypeTreeStack[] = []
-        nodes.forEach(node => {
-            const self = {
-                name: node.name,
-                node: node,
-                children: []
-            }
-            if (node.depth == 0) {
-                tree = self
-            } else {
-                stack[node.depth - 1].children.push(self)
-            }
-            stack[node.depth] = self
-        })
-        return tree
-    }
 }
 
 export interface TypeTreeStack {
@@ -272,6 +271,7 @@ export interface AssetClass {
     scriptId: number | null
     hash: string | null
     typeTree: TypeTree
+    parsedTypeTree?: TypeTreeStack
 }
 
 export interface AssetObjectData {
