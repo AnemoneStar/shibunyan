@@ -33,6 +33,7 @@ export default class Asset {
     endian: Endian = Endian.Big
     assetClasses: AssetClass[] = []
     objects: AssetObjectData[]
+    objectsMap = new Map<bigint | number, AssetObjectData>()
     addIds: (number | bigint)[][] = []
     references: AssetReference[] = []
     comment: string = ""
@@ -116,6 +117,7 @@ export default class Asset {
                 ? {pathId, offset, size, typeId: null, classId: null, classIndex: reader.u32(), stripped: this.format === 16 ? reader.bool() : null, data}
                 : {pathId, offset, size, typeId: reader.i32(), classId: reader.i16(), classIndex: null, destroyed: reader.i16() === 1, stripped: this.format === 15 ? reader.bool() : null, data}
             this.objects.push(object)
+            this.objectsMap.set(object.pathId, object)
         }
 
         if (this.format >= 11) {
