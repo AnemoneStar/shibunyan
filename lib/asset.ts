@@ -158,6 +158,12 @@ export default class Asset {
         return undefined
     }
 
+    parseObjectFromPathID(id: number | bigint) {
+        const object = this.objectsMap.get(id)
+        if (object == null) return
+        return this.parseObject(object)
+    }
+
     parseObject(obj: AssetObjectData) {
         const typeTreeStack = this.findAssetClass(obj)?.parsedTypeTree
         if (typeTreeStack == null) return undefined
