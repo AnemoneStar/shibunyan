@@ -43,7 +43,6 @@ export default class Asset {
         let metaSize = reader.u32()
         let fileSize: number | bigint = reader.u32()
         this.format = reader.u32()
-        console.log(this.format)
         let dataOffset = reader.u32()
         if (this.format >= 9) {
             this.endian = reader.bool() ? Endian.Big : Endian.Little
