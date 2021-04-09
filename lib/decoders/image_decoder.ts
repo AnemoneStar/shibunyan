@@ -97,7 +97,6 @@ export default class ImageDecoder {
     }
 
     decode_etc1() {
-        const l = this.width * this.height * 4
         const bw = Math.floor((this.width + 3) / 4)
         const bh = Math.floor((this.height + 3) / 4)
         const br = new Uint8ClampedArray((bw * 4) * (bh * 4) * 4)
