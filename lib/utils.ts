@@ -23,9 +23,7 @@ try {
 export function wasmB64(b64: string) {
     return {
         module() {
-            console.log(b64)
             const src = base64Decoder(b64)
-            console.log(src)
             const mod = new WebAssembly.Module(src)
             this.module = function() {
                 return mod
