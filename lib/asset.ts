@@ -260,9 +260,10 @@ export default class Asset {
         const blob = this.blobs[path]
         if (blob == null) return
         const offset = r["offset"].value
+        if (typeof offset !== "number" && typeof offset !== "bigint") return
         const size = r["size"].value
-        if (typeof offset !== "number" || typeof size !== "number") return
-        return blob.slice(offset, offset + size)
+        if (typeof size !== "number" && typeof size !== "bigint") return
+        return blob.slice(safeBigIntToNumber(offset), safeBigIntToNumber(offset) + safeBigIntToNumber(size))
     }
 }
 
