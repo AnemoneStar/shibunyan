@@ -1,12 +1,12 @@
 export default function bmpGenerator(width: number, height: number, rgba: Uint8Array) {
-    const offset = 134
+    const offset = 70
     var buffer = Buffer.alloc(offset + (4 * width * height))
 
     buffer.write("BM", 0, 2)
     buffer.writeUInt32LE(buffer.length, 2) // bmp file length
     buffer.writeUInt32LE(0, 6) // reserved
     buffer.writeUInt32LE(offset, 10) // offset
-    buffer.writeUInt32LE(0x6c, 14) // header size
+    buffer.writeUInt32LE(offset - 14, 14) // header size
     buffer.writeUInt32LE(width, 18)
     buffer.writeUInt32LE(height, 22)
     buffer.writeUInt16LE(1, 26) // plane
@@ -21,14 +21,6 @@ export default function bmpGenerator(width: number, height: number, rgba: Uint8A
     buffer.writeUInt32LE(0x0000ff00, 58)
     buffer.writeUInt32LE(0x00ff0000, 62)
     buffer.writeUInt32LE(0xff000000, 66)
-    buffer.write("BGRs", 70, 4)
-    buffer.fill(0, 74, 74 + 36)
-    buffer.writeUInt32LE(1, 110)
-    buffer.writeUInt32LE(1, 114)
-    buffer.writeUInt32LE(1, 118)
-    buffer.writeUInt32LE(0xff000000, 122)
-    buffer.writeUInt32LE(0x00ff0000, 126)
-    buffer.writeUInt32LE(0x0000ff00, 130)
     Buffer.from(rgba.buffer).copy(buffer, offset, 0, rgba.length-1)
     return buffer
 }
