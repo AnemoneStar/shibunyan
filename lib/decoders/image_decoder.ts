@@ -2,7 +2,8 @@ import ObjectValue from "../object_value";
 import { NotImplementedError } from "../error";
 import BinaryReader, { Endian } from "../binary_reader";
 import bmpGenerator from "../bmp_generator";
-import { times } from "../utils";
+import { WASM_PAGE_SIZE } from "../utils";
+import etc2Decoder = require("./wasm/etc2");
 
 const Etc1ModifierTable = [[2, 8], [5, 17], [9, 29], [13, 42], [18, 60], [24, 80], [33, 106], [47, 183]]
 const Etc1SubblockTable = [[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1]]
@@ -42,6 +43,9 @@ export default class ImageDecoder {
                 break
             case 34:
                 d = this.decode_etc1()
+                break
+            case 47:
+                d = this.decode_etc2rgba8()
                 break
             default:
                 throw new NotImplementedError("image fmt: "+fmt)
@@ -145,5 +149,22 @@ export default class ImageDecoder {
         this.width = bw * 4
         this.height = bh * 4
         return new Uint8Array(br.buffer)
+    }
+
+    decode_etc2rgba8() {
+        const width = (this.width + 3) & ~0b11
+        const height = (this.height + 3) & ~0b11
+        this.width = width
+        this.height = height
+
+        const { exports: instance } = etc2Decoder.instance()
+        const inputSize = this.bin.byteLength
+        const outputSize = width * height * 4
+        const inputStart = instance.memory.grow(Math.ceil((inputSize + outputSize) / WASM_PAGE_SIZE)) * WASM_PAGE_SIZE
+        const outputStart = inputStart + inputSize
+        new Uint8Array(instance.memory.buffer).set(this.bin, inputStart)
+        console.log(inputStart, inputSize, outputSize, inputStart + inputSize + outputSize, instance.memory.buffer.byteLength)
+        instance.decode_etc2a8(inputStart, outputStart, width, height)
+        return new Uint8Array(instance.memory.buffer.slice(outputStart, outputStart + outputSize))
     }
 }
