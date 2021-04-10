@@ -35,6 +35,7 @@ export default class ImageDecoder {
                 break
             case 4:
                 d = this.decode_rgba32()
+                break
             case 7:
                 d = this.decode_rgb565()
                 break
