@@ -34,7 +34,7 @@ export default class Asset {
     assetClasses: AssetClass[] = []
     objects: AssetObjectData[]
     objectsMap = new Map<bigint | number, AssetObjectData>()
-    addIds: (number | bigint)[][] = []
+    addIds: [number, (number | bigint)][] = []
     references: AssetReference[] = []
     comment: string = ""
 
