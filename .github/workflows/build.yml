@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
+    - name: Install Build Dependencies
+      run: sudo apt-get install lld-9
     - run: yarn install
     - run: yarn build
     - run: yarn pack
