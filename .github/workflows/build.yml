@@ -1,0 +1,19 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+    - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - run: yarn build
+    - run: yarn pack
+    - uses: actions/upload-artifact@v2
+      with:
+        name: package
+        path: shibunyan-*.tgz
