@@ -11,10 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - name: Install Build Dependencies
-      run: sudo apt-get install lld-9
     - run: yarn install
-    - run: yarn build
+    - name: Build
+      run: PATH="/usr/lib/llvm-10/bin:$PATH" yarn build
     - run: yarn pack
     - uses: actions/upload-artifact@v2
       with:
