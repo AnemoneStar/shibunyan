@@ -27,6 +27,8 @@ function parseTypeTree(typeTree?: TypeTree): TypeTreeStack | undefined {
 }
 
 export default class Asset {
+    static typeTreeKey = Symbol("Asset.typeTree")
+
     format: number
     generatorVersion: string
     targetPlatform: number
@@ -251,6 +253,88 @@ export default class Asset {
         return r
     }
 
+    parseObjectSimple(obj: AssetObjectData, includeTypeTreeKey = true) {
+        const typeTreeStack = this.findAssetClass(obj)?.parsedTypeTree
+        if (typeTreeStack == null) return undefined
+        const reader = new BinaryReader(new DataView(obj.data))
+        reader.isLittleEndian = this.endian == Endian.Little
+        return this.parseObjectSimplePrivate(reader, typeTreeStack, includeTypeTreeKey)
+    }
+
+    private parseObjectSimplePrivate(reader: BinaryReader, typeTree: TypeTreeStack, includeTypeTreeKey: boolean): any {
+        var node = typeTree.node
+        var children = typeTree.children
+        var res: any = includeTypeTreeKey ? {[Asset.typeTreeKey]: typeTree} : {}
+        var resIsObject = true
+
+        if (node.isArray) {
+            var data: ObjectValue[] | Uint8Array | Uint16Array | Uint32Array | Int32Array | Float32Array
+            const size = this.parseObjectPrivate(reader, children.find(e => e.name == "size")!).value as number
+            const dataTypeTree = children.find(e => e.name == "data")!
+            // TODO: support more types
+            if (dataTypeTree.node.type === "char" || dataTypeTree.node.type === "UInt8") {
+                data = new Uint8Array(reader.read(size))
+            } else if (dataTypeTree.node.type == "UInt16" || dataTypeTree.node.type == "unsigned short") {
+                data = new Uint16Array(reader.read(size * 2))
+            } else if (dataTypeTree.node.type == "UInt32" || dataTypeTree.node.type == "unsigned int") {
+                data = new Uint32Array(reader.read(size * 4))
+            } else if (dataTypeTree.node.type == "SInt32" || dataTypeTree.node.type == "int") {
+                data = new Int32Array(reader.read(size * 4))
+            } else if (dataTypeTree.node.type == "float") {
+                data = new Float32Array(reader.read(size * 4))
+            } else {
+                let arr = []
+                for (let i = 0; i<size; i++) {
+                    arr.push(this.parseObjectSimplePrivate(reader, dataTypeTree, includeTypeTreeKey))
+                }
+                if (node.type == "TypelessData") throw new NotImplementedError("typelessdata")
+                data = arr
+            }
+            res = data
+        } else if (node.size == -1) {
+            if (children.length == 1 && children[0].name == "Array" && children[0].node.type == "Array" && children[0].node.isArray) {
+                res = this.parseObjectSimplePrivate(reader, children[0], includeTypeTreeKey)
+                if (node.type == "string") {
+                    const decoder = new TextDecoder()
+                    res = decoder.decode(res)
+                    resIsObject = false
+                }
+            } else {
+                for (const child of children) {
+                    res[child.name] = this.parseObjectSimplePrivate(reader, child, includeTypeTreeKey)
+                }
+            }
+        } else if (children.length > 0) {
+            const pos = reader.pointer
+            for (const child of children) {
+                res[child.name] = this.parseObjectSimplePrivate(reader, child, includeTypeTreeKey)
+            }
+        } else {
+            const pos = reader.pointer
+            var value = 
+                node.type == "bool" ? reader.i8() != 0
+            :   node.type == "SInt8" ? reader.i8()
+            :   node.type == "UInt8" || node.type == "char" ? reader.u8()
+            :   node.type == "SInt16" || node.type == "short" ? reader.i16()
+            :   node.type == "UInt16" || node.type == "unsigned short" ? reader.u16()
+            :   node.type == "SInt32" || node.type == "int" ? reader.i32()
+            :   node.type == "UInt32" || node.type == "unsigned int" ? reader.u32()
+            :   node.type == "SInt64" || node.type == "long long" ? reader.i64()
+            :   node.type == "UInt64" || node.type == "unsigned long long" ? reader.u64()
+            :   node.type == "float" ? reader.float()
+            :   node.type == "double" ? reader.double()
+            :   node.type == "ColorRGBA" ? [reader.u8(), reader.u8(), reader.u8(), reader.u8()]
+            :   reader.read(node.size)
+            reader.jump(pos + node.size)
+            res = value
+        }
+        if (node.type === "StreamingInfo") {
+            res = this.solveStreamingDataSimple(res)
+        }
+        if ((node.flags & 0x4000) != 0) reader.align(4)
+        return res
+    }
+
     solveStreamingData(r: ObjectValue) {
         let path = r["path"].value
         if (typeof path !== "string") return
@@ -262,6 +346,21 @@ export default class Asset {
         const offset = r["offset"].value
         if (typeof offset !== "number" && typeof offset !== "bigint") return
         const size = r["size"].value
+        if (typeof size !== "number" && typeof size !== "bigint") return
+        return blob.slice(safeBigIntToNumber(offset), safeBigIntToNumber(offset) + safeBigIntToNumber(size))
+    }
+
+    solveStreamingDataSimple(r: any) {
+        let path = r.path
+        if (typeof path !== "string") return
+        const prefix = `archive:/${this.name}/`
+        if (path.startsWith(prefix)) path = path.slice(prefix.length)
+        if (path === "") return
+        const blob = this.blobs[path]
+        if (blob == null) return
+        const offset = r.offset
+        if (typeof offset !== "number" && typeof offset !== "bigint") return
+        const size = r.size
         if (typeof size !== "number" && typeof size !== "bigint") return
         return blob.slice(safeBigIntToNumber(offset), safeBigIntToNumber(offset) + safeBigIntToNumber(size))
     }
