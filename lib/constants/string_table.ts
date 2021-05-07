@@ -1,4 +1,4 @@
-const STRING_TABLE: {[key: string]: string} = {
+export const STRING_TABLE: {[key: string]: string} = {
     "0": "AABB",
     "5": "AnimationClip",
     "19": "AnimationCurve",
@@ -100,5 +100,3 @@ const STRING_TABLE: {[key: string]: string} = {
     "1015": "m_ScriptingClassIdentifier",
     "1042": "Gradient"
 }
-
-export default STRING_TABLE

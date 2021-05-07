@@ -1,8 +1,8 @@
-import BinaryReader from "./binary_reader";
-import string_table from "./constants/string_table";
+import { BinaryReader } from "./binary_reader";
+import { STRING_TABLE } from "./constants/string_table";
 
-export default class TypeTree {
-    nodes: Node[] = []
+export class TypeTree {
+    nodes: TypeTreeNode[] = []
     constructor(reader: BinaryReader, version: number) {
         if (version < 10 || version === 11) throw new Error(`this typetree version(${version}) is not supported`)
         const nodeCount = reader.u32()
@@ -31,13 +31,13 @@ export default class TypeTree {
                 bufferReader.jump(node.type)
                 overwrite.type = bufferReader.zeroTerminatedString()
             } else {
-                overwrite.type = string_table[(node.type + 2**31).toString()]
+                overwrite.type = STRING_TABLE[(node.type + 2**31).toString()]
             }
             if (node.name >= 0) {
                 bufferReader.jump(node.name)
                 overwrite.name = bufferReader.zeroTerminatedString()
             } else {
-                overwrite.name = string_table[(node.name + 2**31).toString()]
+                overwrite.name = STRING_TABLE[(node.name + 2**31).toString()]
             }
             return Object.assign(node, overwrite)
         })
@@ -47,7 +47,7 @@ export default class TypeTree {
     }
 }
 
-export interface Node {
+export interface TypeTreeNode {
     version: number
     depth: number
     isArray: boolean

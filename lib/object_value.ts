@@ -1,6 +1,6 @@
 import { Endian } from "./binary_reader";
 
-export default class ObjectValue{
+export class ObjectValue{
     name: string
     type: string
     value: any

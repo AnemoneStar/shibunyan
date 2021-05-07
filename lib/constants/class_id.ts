@@ -1,4 +1,4 @@
-const CLASS_ID: {[key: string]: string} ={
+export const CLASS_ID: {[key: string]: string} ={
     "1": "GameObject",
     "2": "Component",
     "3": "LevelGameManager",
@@ -236,5 +236,3 @@ const CLASS_ID: {[key: string]: string} ={
     "1113": "LightmapParameters",
     "1120": "LightmapSnapshot"
 }
-
-export default CLASS_ID

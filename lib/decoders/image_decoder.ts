@@ -1,14 +1,14 @@
-import ObjectValue from "../object_value";
+import { ObjectValue } from "../object_value";
 import { NotImplementedError } from "../error";
-import BinaryReader, { Endian } from "../binary_reader";
-import bmpGenerator from "../bmp_generator";
+import { BinaryReader, Endian } from "../binary_reader";
+import { bmpGenerator } from "../bmp_generator";
 import { WASM_PAGE_SIZE } from "../utils";
 import etc2Decoder = require("./wasm/etc2");
 
 const Etc1ModifierTable = [[2, 8], [5, 17], [9, 29], [13, 42], [18, 60], [24, 80], [33, 106], [47, 183]]
 const Etc1SubblockTable = [[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1]]
 
-export default class ImageDecoder {
+export class ImageDecoder {
     endian: number
     width: number
     height: number

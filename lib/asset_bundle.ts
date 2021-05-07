@@ -1,10 +1,10 @@
-import BinaryReader from "./binary_reader";
+import { BinaryReader } from "./binary_reader";
 import { UnknownAssetBundleSignatureError, NotImplementedError } from "./error";
-import Asset from "./asset";
+import { Asset } from "./asset";
 import { times } from "./utils";
 import { uncompressBlock } from "@rinsuki/lz4-ts"
 
-export default class AssetBundle {
+export class AssetBundle {
     signature: string
     format: number
     unityVersion: string

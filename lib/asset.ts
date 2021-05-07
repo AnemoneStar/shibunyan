@@ -1,8 +1,8 @@
-import BinaryReader, { Endian } from "./binary_reader";
-import TypeTree, { Node } from "./type_tree";
+import { BinaryReader, Endian } from "./binary_reader";
+import { TypeTree, TypeTreeNode } from "./type_tree";
 import { NotImplementedError, TypeTreeDefaultIsNotImplemented } from "./error";
-import class_id from "./constants/class_id";
-import ObjectValue from "./object_value";
+import { CLASS_ID } from "./constants/class_id";
+import { ObjectValue } from "./object_value";
 import { safeBigIntToNumber } from "./utils";
 
 function parseTypeTree(typeTree?: TypeTree): TypeTreeStack | undefined {
@@ -31,7 +31,7 @@ export interface ParseObjectSimpleOptions {
     useNullPrototype: boolean,
 }
 
-export default class Asset {
+export class Asset {
     static readonly typeTreeKey = Symbol("Asset.typeTree")
 
     format: number
@@ -159,7 +159,7 @@ export default class Asset {
         if (assetClass && assetClass.typeTree && assetClass.typeTree.nodes[0]) {
             return assetClass.typeTree.nodes[0].type
         } else if (assetClass) {
-            return class_id[assetClass.classId]
+            return CLASS_ID[assetClass.classId]
         }
         return undefined
     }
@@ -377,7 +377,7 @@ export default class Asset {
 
 export interface TypeTreeStack {
     name: string
-    node: Node
+    node: TypeTreeNode
     children: TypeTreeStack[]
 }
 

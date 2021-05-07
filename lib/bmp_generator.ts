@@ -1,4 +1,4 @@
-export default function bmpGenerator(width: number, height: number, rgba: Uint8Array) {
+export function bmpGenerator(width: number, height: number, rgba: Uint8Array) {
     const offset = 134
     var buffer = Buffer.alloc(offset + (4 * width * height))
 

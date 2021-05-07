@@ -6,7 +6,7 @@ export enum Endian {
 }
 
 // compatible layer
-export default class BinaryReader extends SyncReader {
+export class BinaryReader extends SyncReader {
     // public reader: SyncReader
 
     // constructor(buffer: Uint8Array) {
