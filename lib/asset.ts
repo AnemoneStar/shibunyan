@@ -32,7 +32,7 @@ export interface ParseObjectSimpleOptions {
 }
 
 export default class Asset {
-    static typeTreeKey = Symbol("Asset.typeTree")
+    static readonly typeTreeKey = Symbol("Asset.typeTree")
 
     format: number
     generatorVersion: string
