@@ -26,6 +26,11 @@ function parseTypeTree(typeTree?: TypeTree): TypeTreeStack | undefined {
     return tree
 }
 
+export interface ParseObjectSimpleOptions {
+    includeTypeTreeKey: boolean,
+    useNullPrototype: boolean,
+}
+
 export default class Asset {
     static typeTreeKey = Symbol("Asset.typeTree")
 
@@ -253,18 +258,22 @@ export default class Asset {
         return r
     }
 
-    parseObjectSimple(obj: AssetObjectData, includeTypeTreeKey = true) {
+    parseObjectSimple(obj: AssetObjectData, options: Partial<ParseObjectSimpleOptions> = {}) {
         const typeTreeStack = this.findAssetClass(obj)?.parsedTypeTree
         if (typeTreeStack == null) return undefined
         const reader = new BinaryReader(new DataView(obj.data))
         reader.isLittleEndian = this.endian == Endian.Little
-        return this.parseObjectSimplePrivate(reader, typeTreeStack, includeTypeTreeKey)
+        return this.parseObjectSimplePrivate(reader, typeTreeStack, {
+            includeTypeTreeKey: options.includeTypeTreeKey ?? false,
+            useNullPrototype: options.useNullPrototype ?? false,
+        })
     }
 
-    private parseObjectSimplePrivate(reader: BinaryReader, typeTree: TypeTreeStack, includeTypeTreeKey: boolean): any {
+    private parseObjectSimplePrivate(reader: BinaryReader, typeTree: TypeTreeStack, options: ParseObjectSimpleOptions): any {
         var node = typeTree.node
         var children = typeTree.children
-        var res: any = includeTypeTreeKey ? {[Asset.typeTreeKey]: typeTree} : {}
+        var res: any = options.useNullPrototype ? Object.create(null) : {}
+        if (options.includeTypeTreeKey) res[Asset.typeTreeKey] = typeTree
         var resIsObject = true
 
         if (node.isArray) {
@@ -285,7 +294,7 @@ export default class Asset {
             } else {
                 let arr = []
                 for (let i = 0; i<size; i++) {
-                    arr.push(this.parseObjectSimplePrivate(reader, dataTypeTree, includeTypeTreeKey))
+                    arr.push(this.parseObjectSimplePrivate(reader, dataTypeTree, options))
                 }
                 if (node.type == "TypelessData") throw new NotImplementedError("typelessdata")
                 data = arr
@@ -293,7 +302,7 @@ export default class Asset {
             res = data
         } else if (node.size == -1) {
             if (children.length == 1 && children[0].name == "Array" && children[0].node.type == "Array" && children[0].node.isArray) {
-                res = this.parseObjectSimplePrivate(reader, children[0], includeTypeTreeKey)
+                res = this.parseObjectSimplePrivate(reader, children[0], options)
                 if (node.type == "string") {
                     const decoder = new TextDecoder()
                     res = decoder.decode(res)
@@ -301,13 +310,13 @@ export default class Asset {
                 }
             } else {
                 for (const child of children) {
-                    res[child.name] = this.parseObjectSimplePrivate(reader, child, includeTypeTreeKey)
+                    res[child.name] = this.parseObjectSimplePrivate(reader, child, options)
                 }
             }
         } else if (children.length > 0) {
             const pos = reader.pointer
             for (const child of children) {
-                res[child.name] = this.parseObjectSimplePrivate(reader, child, includeTypeTreeKey)
+                res[child.name] = this.parseObjectSimplePrivate(reader, child, options)
             }
         } else {
             const pos = reader.pointer
