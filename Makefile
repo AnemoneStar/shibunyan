@@ -1,4 +1,4 @@
-CFLAGS += -O3 -target wasm32-wasm -fno-builtin
+CFLAGS += -Os -target wasm32-wasm -fno-builtin
 
 all: dist/decoders/wasm/etc2.js
 clean:
