@@ -339,6 +339,9 @@ export class Asset {
         }
         if (node.type === "StreamingInfo") {
             res = this.solveStreamingDataSimple(res)
+        } else if (node.type === "map") {
+            res = new Map(res.map(({first, second}: any) => [first, second]))
+            if (options.includeTypeTreeKey) res[Asset.typeTreeKey] = typeTree
         }
         if ((node.flags & 0x4000) != 0) reader.align(4)
         return res
