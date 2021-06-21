@@ -36,8 +36,7 @@ export class AssetBundle {
                     const headerSize = reader.u32()
                     const size = reader.u32()
                     reader.jump(position + headerSize - 4)
-                    const data = reader.read(size)
-                    const asset = new Asset(new Uint8Array(data), name, {})
+                    const asset = new Asset(reader.bytesNoCopy(size), name, {})
                     this.assets.push(asset)
                 }
             }
@@ -48,7 +47,9 @@ export class AssetBundle {
                 const uncompressedBlockSize = reader.u32()
                 const flags = reader.u32()
                 if (this.format >= 7) reader.align(16)
-                const head = new BinaryReader(new DataView(this.uncompress(reader.read(compressedBlockSize), uncompressedBlockSize, flags)))
+                const uncompressed = new Uint8Array(uncompressedBlockSize)
+                this.uncompress(reader.bytesNoCopy(compressedBlockSize), uncompressed, flags)
+                const head = new BinaryReader(uncompressed)
                 const guid = head.read(16)
                 const blocks = times(head.u32(), () => ({
                     u: head.u32(),
@@ -72,9 +73,9 @@ export class AssetBundle {
                 var ptr = 0
                 
                 for (let block of blocks) {
-                    const unCompData = this.uncompress(reader.read(block.c), block.u, block.flags)
-                    rawData.set(new Uint8Array(unCompData), ptr)
-                    ptr += unCompData.byteLength
+                    const data = reader.bytesNoCopy(block.c)
+                    this.uncompress(data, rawData.subarray(ptr, ptr + block.u), block.flags)
+                    ptr += block.u
                 }
 
                 // TODO: merge with UnityRaw
@@ -96,18 +97,20 @@ export class AssetBundle {
         }
     }
 
-    uncompress(buffer: ArrayBuffer, max_dest_size: number, flags: number): ArrayBuffer {
+    uncompress(buffer: Uint8Array, output: Uint8Array, flags: number) {
         switch(flags & 0x3f) {
             case 0:
-                return buffer
+                output.set(buffer)
+                break
             case 2:
             case 3:
-                var uncompBuffer = new Uint8Array(max_dest_size)
-                uncompressBlock(new Uint8Array(buffer), uncompBuffer)
-                return uncompBuffer.buffer
+                const uncompressed = uncompressBlock(buffer, output)
+                if (uncompressed !== output.byteLength) throw new Error("uncompressed != output.byteLength")
+                break
             default:
                 console.warn("unknown flag: "+flags.toString(16))
-                return buffer
+                output.set(buffer)
+                break
         }
     }
 }
