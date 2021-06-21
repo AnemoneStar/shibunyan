@@ -45,8 +45,8 @@ export class Asset {
     references: AssetReference[] = []
     comment: string = ""
 
-    constructor(data: ArrayBufferView, public name: string, public blobs: {[key: string]: Uint8Array | undefined}) {
-        const reader = new BinaryReader(new DataView(data.buffer))
+    constructor(data: Uint8Array | ArrayBuffer | DataView, public name: string, public blobs: {[key: string]: Uint8Array | undefined}) {
+        const reader = new BinaryReader(data)
         let metaSize = reader.u32()
         let fileSize: number | bigint = reader.u32()
         this.format = reader.u32()
