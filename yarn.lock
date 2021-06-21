@@ -2,20 +2,20 @@
 # yarn lockfile v1
 
 
-"@rinsuki/lz4-ts@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@rinsuki/lz4-ts/-/lz4-ts-1.0.0.tgz#62c4501e7cfd43187704b453b14240690502ff36"
-  integrity sha512-TdrVIgG7CNDfDboMy4O5gcFnlbF02NlH3MGIGHMDLaS69rpGXsIAQajdHl/2e7eg89ltED41TbPILXXSuTuO1Q==
+"@rinsuki/lz4-ts@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@rinsuki/lz4-ts/-/lz4-ts-1.0.1.tgz#83d956429bf593a5a38ef4e349545410ba262d01"
+  integrity sha512-vkQP6c9GGEvsND/tY6eyb5g6bq+zzbI8VcAPozr6siisIZKb4tq1Jr6Z2+5GqkEjxHGLCfncrBWR1h86t8CEIg==
 
 "@types/node@^14.0.13":
   version "14.0.13"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-14.0.13.tgz#ee1128e881b874c371374c1f72201893616417c9"
   integrity sha512-rouEWBImiRaSJsVA+ITTFM6ZxibuAlTuNOCyxVbwreu6k6+ujs7DfnU9o+PShFhET78pMBl3eH+AGSI5eOTkPA==
 
-binarin@^0.1.3:
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/binarin/-/binarin-0.1.3.tgz#5689e1e1f90b7e1246441b6daf08233355feb8be"
-  integrity sha512-wbN1zet+mRVAIuPqalzr1eCOk2dgyqr7kA11dA2lc9KLTZo9x6Z9dgD+CEZxXM1nlCDim23vppmS7g4cR+qLiQ==
+binarin@^0.2.1:
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/binarin/-/binarin-0.2.1.tgz#c4db7228f44d8fec807dbf98d4fe065e0a26093b"
+  integrity sha512-KmCRupLittdaTUGLFd+h6sxEI1WMBnvqkS9nnixnGbHFfD4nb7J+q9EFtK/NbSrE3V0lb/2jubDt398qX9PUUQ==
 
 typescript@^3.9.5:
   version "3.9.5"
