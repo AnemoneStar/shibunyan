@@ -82,11 +82,11 @@ export class AssetBundle {
                 var blobs: {[key: string]: Uint8Array} = {}
                 for (let block of assetEntries) {
                     if (block.status === 4) continue
-                    blobs[block.name] = rawData.slice(block.offset, block.size + block.offset)
+                    blobs[block.name] = rawData.subarray(block.offset, block.size + block.offset)
                 }
                 for (let block of assetEntries) {
                     if (block.status !== 4) continue
-                    const buf = rawData.slice(block.offset, block.size + block.offset)
+                    const buf = rawData.subarray(block.offset, block.size + block.offset)
                     const asset = new Asset(buf, block.name, blobs)
                     this.assets.push(asset)
                 }
