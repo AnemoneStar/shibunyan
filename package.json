@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepack": "npm run build",
-    "build": "rm -r dist && tsc && make && rollup -c"
+    "build": "rm -rf dist && tsc && make && rollup -c"
   },
   "directories": {
     "lib": "dist"
