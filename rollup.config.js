@@ -20,6 +20,8 @@ export default [{
                 },
                 keep_numbers: true,
             },
+            keep_classnames: true,
+            keep_fnames: true,
             ecma: 2015,
         }),
     ]
