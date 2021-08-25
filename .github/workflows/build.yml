@@ -20,6 +20,7 @@ jobs:
         cd gh-upload
         mv ../shibunyan-*.tgz ./
         cp ../package.json ./
+        cp ../dist/shibunyan.umd.min.js ./
     - uses: actions/upload-artifact@v2
       with:
         name: package
