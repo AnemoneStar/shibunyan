@@ -15,7 +15,12 @@ jobs:
     - name: Build
       run: PATH="/usr/lib/llvm-10/bin:$PATH" yarn build
     - run: yarn pack
+    - run: |
+        mkdir gh-upload
+        cd gh-upload
+        mv ../shibunyan-*.tgz ./
+        cp ../package.json ./
     - uses: actions/upload-artifact@v2
       with:
         name: package
-        path: shibunyan-*.tgz
+        path: gh-upload/*
