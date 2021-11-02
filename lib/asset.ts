@@ -26,7 +26,12 @@ function parseTypeTree(typeTree?: TypeTree): TypeTreeStack | undefined {
     return tree
 }
 
-export interface ParseObjectSimpleOptions {
+export interface ParseObjectOptions {
+    __stringAsByteArray: boolean,
+    textAssetContentAsByteArray: boolean,
+}
+
+export interface ParseObjectSimpleOptions extends ParseObjectOptions {
     includeTypeTreeKey: boolean,
     useNullPrototype: boolean,
 }
@@ -164,28 +169,28 @@ export class Asset {
         return undefined
     }
 
-    parseObjectFromPathID(id: number | bigint) {
+    parseObjectFromPathID(id: number | bigint, options: Partial<ParseObjectOptions> = {}) {
         const object = this.objectsMap.get(id)
         if (object == null) return
-        return this.parseObject(object)
+        return this.parseObject(object, options)
     }
 
-    parseObject(obj: AssetObjectData) {
+    parseObject(obj: AssetObjectData, options: Partial<ParseObjectOptions> = {}) {
         const typeTreeStack = this.findAssetClass(obj)?.parsedTypeTree
         if (typeTreeStack == null) return undefined
         const reader = new BinaryReader(new DataView(obj.data))
         reader.isLittleEndian = this.endian == Endian.Little
-        return this.parseObjectPrivate(reader, typeTreeStack)
+        return this.parseObjectPrivate(reader, typeTreeStack, options)
     }
 
-    private parseObjectPrivate(reader: BinaryReader, typeTree: TypeTreeStack): ObjectValue {
+    private parseObjectPrivate(reader: BinaryReader, typeTree: TypeTreeStack, options: Partial<ParseObjectOptions>): ObjectValue {
         var r: ObjectValue | undefined
         var node = typeTree.node
         var children = typeTree.children
 
         if (node.isArray) {
             var data: ObjectValue[] | Uint8Array | Uint16Array | Uint32Array | Int32Array | Float32Array
-            const size = this.parseObjectPrivate(reader, children.find(e => e.name == "size")!).value as number
+            const size = this.parseObjectPrivate(reader, children.find(e => e.name == "size")!, options).value as number
             const dataTypeTree = children.find(e => e.name == "data")!
             // TODO: support more types
             if (dataTypeTree.node.type === "char" || dataTypeTree.node.type === "UInt8") {
@@ -201,7 +206,7 @@ export class Asset {
             } else {
                 let arr = []
                 for (let i = 0; i<size; i++) {
-                    arr.push(this.parseObjectPrivate(reader, dataTypeTree))
+                    arr.push(this.parseObjectPrivate(reader, dataTypeTree, options))
                 }
                 if (node.type == "TypelessData") throw new NotImplementedError("typelessdata")
                 data = arr
@@ -212,27 +217,28 @@ export class Asset {
                 reader.endian,
                 data,
             )
-        } else if (node.size == -1) {
+        } else if (children.length > 0) {
             r = new ObjectValue(node.name, node.type, reader.endian)
             if (children.length == 1 && children[0].name == "Array" && children[0].node.type == "Array" && children[0].node.isArray) {
-                r.value = this.parseObjectPrivate(reader, children[0]).value
-                if (node.type == "string") {
+                r.value = this.parseObjectPrivate(reader, children[0], options).value
+                if (node.type == "string" && options.__stringAsByteArray !== true) {
                     const decoder = new TextDecoder()
                     r.value = decoder.decode(r.value)
                 }
             } else {
+                r.isStruct = true
                 for (const child of children) {
-                    r![child.name] = this.parseObjectPrivate(reader, child)
+                    let addopts: Partial<ParseObjectOptions> = {}
+                    let needsAdd = false
+                    if (child.name === "m_Script" && node.type === "TextAsset" && options.textAssetContentAsByteArray) {
+                        addopts.__stringAsByteArray = true
+                        needsAdd = true
+                    }
+                    r![child.name] = this.parseObjectPrivate(reader, child, needsAdd ? {...options, ...addopts } : options)
                 }
             }
-        } else if (children.length > 0) {
-            const pos = reader.pointer
-            r = new ObjectValue(node.name, node.type, reader.endian)
-            r.isStruct = true
-            for (const child of children) {
-                r![child.name] = this.parseObjectPrivate(reader, child)
-            }
         } else {
+            if (node.size < 0) throw new Error("Invalid node size")
             const pos = reader.pointer
             var value = 
                 node.type == "bool" ? reader.i8() != 0
@@ -263,13 +269,10 @@ export class Asset {
         if (typeTreeStack == null) return undefined
         const reader = new BinaryReader(new DataView(obj.data))
         reader.isLittleEndian = this.endian == Endian.Little
-        return this.parseObjectSimplePrivate(reader, typeTreeStack, {
-            includeTypeTreeKey: options.includeTypeTreeKey ?? false,
-            useNullPrototype: options.useNullPrototype ?? false,
-        })
+        return this.parseObjectSimplePrivate(reader, typeTreeStack, options)
     }
 
-    private parseObjectSimplePrivate(reader: BinaryReader, typeTree: TypeTreeStack, options: ParseObjectSimpleOptions): any {
+    private parseObjectSimplePrivate(reader: BinaryReader, typeTree: TypeTreeStack, options: Partial<ParseObjectSimpleOptions>): any {
         var node = typeTree.node
         var children = typeTree.children
         var res: any = options.useNullPrototype ? Object.create(null) : {}
@@ -278,7 +281,7 @@ export class Asset {
 
         if (node.isArray) {
             var data: ObjectValue[] | Uint8Array | Uint16Array | Uint32Array | Int32Array | Float32Array
-            const size = this.parseObjectPrivate(reader, children.find(e => e.name == "size")!).value as number
+            const size = this.parseObjectPrivate(reader, children.find(e => e.name == "size")!, options).value as number
             const dataTypeTree = children.find(e => e.name == "data")!
             // TODO: support more types
             if (dataTypeTree.node.type === "char" || dataTypeTree.node.type === "UInt8") {
@@ -300,25 +303,27 @@ export class Asset {
                 data = arr
             }
             res = data
-        } else if (node.size == -1) {
+        } else if (children.length > 0) {
             if (children.length == 1 && children[0].name == "Array" && children[0].node.type == "Array" && children[0].node.isArray) {
                 res = this.parseObjectSimplePrivate(reader, children[0], options)
-                if (node.type == "string") {
+                if (node.type == "string" && options.__stringAsByteArray !== true) {
                     const decoder = new TextDecoder()
                     res = decoder.decode(res)
                     resIsObject = false
                 }
             } else {
                 for (const child of children) {
-                    res[child.name] = this.parseObjectSimplePrivate(reader, child, options)
+                    let addopts: Partial<ParseObjectOptions> = {}
+                    let needsAdd = false
+                    if (child.name === "m_Script" && node.type === "TextAsset" && options.textAssetContentAsByteArray) {
+                        addopts.__stringAsByteArray = true
+                        needsAdd = true
+                    }
+                    res[child.name] = this.parseObjectSimplePrivate(reader, child, needsAdd ? { ...options, ...addopts } : options)
                 }
             }
-        } else if (children.length > 0) {
-            const pos = reader.pointer
-            for (const child of children) {
-                res[child.name] = this.parseObjectSimplePrivate(reader, child, options)
-            }
         } else {
+            if (node.size < 0) throw new Error("Invalid node size")
             const pos = reader.pointer
             var value = 
                 node.type == "bool" ? reader.i8() != 0
